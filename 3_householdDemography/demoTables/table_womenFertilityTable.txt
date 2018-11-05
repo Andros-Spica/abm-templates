@@ -1,0 +1,9 @@
+"Table 11b, https://www.cairn-int.info/article-E_POPU_801_0009--the-demography-of-south-asia-from-the-19.htm"
+15 50 5
+"15-19" 0.103
+"20-24" 0.254
+"25-29" 0.259
+"30-34" 0.203
+"35-39" 0.134
+"40-44" 0.063
+"45-49" 0.027
