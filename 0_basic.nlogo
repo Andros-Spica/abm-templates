@@ -20,8 +20,6 @@
 ;;  You should have received a copy of the GNU General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-extensions [vid]
-
 ;;;;;;;;;;;;;;;;;
 ;;;;; BREEDS ;;;;
 ;;;;;;;;;;;;;;;;;
@@ -103,9 +101,6 @@ to set-parameters
   ; set random seed
   random-seed SEED
 
-  ; check parameters values
-  parameters-check
-
   ;;; setup parameters depending on the type of experiment
   if (experiment-type = "user-defined")
   [
@@ -120,19 +115,24 @@ to set-parameters
     set modContParameter 1E-6 + random-float modContParameter ; at least very small a minimun grow rate
   ]
 
+  ; check parameters values
+  parameters-check
+
 end
 
 to parameters-check
 
   ;;; initial parameter check (e.g., avoiding division per zero error)
-  if (modDiscParameter = 0)
+  check-par-is-positive "modDiscParameter" modDiscParameter
+  check-par-is-positive "modContParameter" modContParameter
+
+end
+
+to check-par-is-positive [ parName parValue ]
+
+  if (parValue <= 0)
   [
-    print "ERROR: modDiscParameter must be greater than zero"
-    stop
-  ]
-  if (modContParameter = 0)
-  [
-    print "ERROR: modContParameter must be greater than zero"
+    print (word "ERROR: " parName " must be greater than zero")
     stop
   ]
 

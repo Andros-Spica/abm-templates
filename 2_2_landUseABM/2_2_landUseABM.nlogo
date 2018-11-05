@@ -222,8 +222,8 @@ end
 to parameters-check-1
 
   ;;; initial parameter check (avoiding division per zero error
-  if (distance_penalty_gradient = 0) [ print "ERROR: distance_penalty_gradient must be greater than zero" stop]
-  if (potential_decay_gradient = 0) [ print "ERROR: potential_decay_gradient must be greater than zero" stop]
+  check-par-is-positive "distance_penalty_gradient" distance_penalty_gradient
+  check-par-is-positive "potential_decay_gradient" potential_decay_gradient
 
 end
 
@@ -232,11 +232,22 @@ to parameters-check-2
   ;;; check number of initial centers and land use units
   if (initLandUse >= count patches) [print "ERROR: initial number of land use units is too high compare to the number of patches" stop ]
   if (initGroups >= count patches) [print "ERROR: initial number of centers is too high compare to the number of patches" stop ]
-  if (initLandUse < 3 * initGroups) [print "Warning: initial number of centers is too high compare to the initial number of land use units. Some groups will be initialised empty" ]
   if (initGroups >= (count patches) - numNullPatches ) [print "ERROR: initial number of centers is too high compare to the number of useful patches (too many null patches)" stop ]
+
+  if (initLandUse < 3 * initGroups) [print "Warning: initial number of centers is too high compare to the initial number of land use units. Some groups will be initialised empty" ]
   if (initGroups = 0) [ set initLandUse 0 print "Warning: there are no groups, so the initial proportion of land use will be set at 0" ]
   if (numNullBodies = 0) [ set numNullPatches 0 print "Warning: there is no null bodies, so the number of null patches will be set at 0" ]
   if (numNullPatches = 0) [ set numNullBodies 0 print "Warning: there is no null patches, so the number of null bodies will be set at 0" ]
+
+end
+
+to check-par-is-positive [ parName parValue ]
+
+  if (parValue <= 0)
+  [
+    print (word "ERROR: " parName " must be greater than zero")
+    stop
+  ]
 
 end
 
@@ -1008,8 +1019,8 @@ end
 
 to load-experiment
 
-  ;;; this procedure loads the values of each (explored) parameter from a csv file.
-  ;;; Note that the setup will use the value set by the user for any other parameter.
+  ;;; this procedure loads the values of each (explored) parameter from a csv file placed in local folder called "exp".
+  ;;; Note that the setup will use the value set by the user for any parameter not included here.
 
   let FilePath "exp//"
   let filename (word FilePath "exp_" expNumber ".csv")
@@ -1074,58 +1085,6 @@ end
 to-report get-value-in-gradient [ input gradient maximum ]
 
   report e ^ ( - input / ((gradient / 100) * maximum) )
-
-end
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;; Spatial Statistics
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-to-report calculate-mean-landUse
-
-  let strList [landUse] of patches
-  let numList (list)
-  foreach strList [
-    x ->
-    if ( x = "N" ) [ set numList lput 0 numList ]
-    if ( x = "H" ) [ set numList lput 1 numList ]
-    if ( x = "F" ) [ set numList lput 2 numList ]
-  ]
-  let avLandUse mean numList
-  report avLandUse
-
-end
-
-to-report calculate-weight [ i j weighting ]
-
-  let spatial-distance 0
-  let std-spatial-distance 0
-  let out 0
-
-  if (weighting = "standardised distance") [
-
-    ;;;"standardised inverse-distance"
-    ask i [ set spatial-distance distance j ]
-    set std-spatial-distance spatial-distance / maxDist
-    set out ( 1 - std-spatial-distance )
-  ]
-
-  if (weighting = "inverse distance") [
-
-    ;;;"simple inverse-distance"
-    ask i [ set spatial-distance distance j ]
-    set out ( 1 / spatial-distance )
-  ]
-  report out
-
-end
-
-to-report calculate-distance-from [ i value ]
-
-  ;;; distance from the mean
-  if ([landUse] of i = "N") [ report 0 - value ]
-  if ([landUse] of i = "H") [ report 1 - value ]
-  if ([landUse] of i = "F") [ report 2 - value ]
 
 end
 @#$#@#$#@

@@ -120,10 +120,6 @@ to set-parameters
     set numNullBodies random (1 + num_null_bodies)
 	  set numNullPatches (count patches) * random (1 + num_null_patches) / 100
   ]
-  if (typeOfExperiment = "defined by expNumber")
-  [
-    ;load-experiment
-  ]
 
   parameters-check-2
 
@@ -132,7 +128,7 @@ end
 to parameters-check-1
 
   ;;; initial parameter check (avoiding division per zero error
-  if (potential_decay_gradient = 0) [ print "ERROR: potential_decay_gradient must be greater than zero" stop]
+  check-par-is-positive "potential_decay_gradient" potential_decay_gradient
 
 end
 
@@ -141,6 +137,16 @@ to parameters-check-2
   ;;; check number of null bodies/patches
   if (numNullBodies = 0) [ set numNullPatches 0 print "Warning: there is no null bodies, so the number of null patches will be set at 0" ]
   if (numNullPatches = 0) [ set numNullBodies 0 print "Warning: there is no null patches, so the number of null bodies will be set at 0" ]
+
+end
+
+to check-par-is-positive [ parName parValue ]
+
+  if (parValue <= 0)
+  [
+    print (word "ERROR: " parName " must be greater than zero")
+    stop
+  ]
 
 end
 
@@ -576,19 +582,8 @@ CHOOSER
 84
 typeOfExperiment
 typeOfExperiment
-"random" "user-defined" "defined by expNumber"
+"random" "user-defined"
 1
-
-INPUTBOX
-14
-89
-80
-149
-expNumber
-0.0
-1
-0
-Number
 
 TEXTBOX
 8
@@ -601,10 +596,10 @@ Experiment configuration
 1
 
 INPUTBOX
-80
-89
-142
-149
+48
+90
+110
+150
 seed
 0.0
 1

@@ -20,8 +20,6 @@
 ;;  You should have received a copy of the GNU General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-extensions [vid]
-
 ;;;;;;;;;;;;;;;;;
 ;;;;; BREEDS ;;;;
 ;;;;;;;;;;;;;;;;;
@@ -117,6 +115,26 @@ to set-parameters
     ;;; use values from user interface as a maximum for random uniform distributions
     set initGrowers 1 + random init-growers ; at least one grower
     set maxGrowthRate 1E-6 + random-float max-growth-rate ; at least very small a minimun grow rate
+  ]
+
+  parameters-check
+
+end
+
+to parameters-check
+
+  ;;; initial parameter check (e.g., avoiding division per zero error)
+  check-par-is-positive "initGrowers" initGrowers
+  check-par-is-positive "maxGrowthRate" maxGrowthRate
+
+end
+
+to check-par-is-positive [ parName parValue ]
+
+  if (parValue <= 0)
+  [
+    print (word "ERROR: " parName " must be greater than zero")
+    stop
   ]
 
 end
