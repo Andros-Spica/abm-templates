@@ -10,48 +10,63 @@
 ######################################################################
 
 #install.packages("demogR")
+#
+#this.dir <- dirname(parent.frame(2)$ofile) # r file must be "sourced" for this to work in RStudio
+#setwd(this.dir)
 
 library(demogR)
 
-this.dir <- dirname(parent.frame(2)$ofile) # r file must be "sourced" for this to work in RStudio
-setwd(this.dir)
+interpolatePerYear <- function(raw, ages = c(0.5, 1.5, 4, seq(8.5, 93.5, 5))) {
+  
+  perYear <- data.frame(matrix(numeric(0), nrow = 151, ncol = ncol(raw)))
+  names(perYear) <- 1:ncol(perYear)
+  
+  for (i in 1:ncol(raw)) {
+    perYear[, i] <- approx(ages, raw[, i], 
+                           xout = 1:151, yleft = 0, yright = 1)$y
+  }
+  row.names(perYear) <- 0:150
+  
+  return(perYear)
+}
 
-ages <- c(0.5, 1.5, 4, seq(8.5, 98.5, 5))
 
 # West
 
-west_raw <- t(cdmltw(sex = "F")$nqx)
+write.table(
+  interpolatePerYear(t(cdmltw(sex = "F")$nqx)), 
+  file = "cdmltwF.txt")
 
-west_1year <- data.frame()
-
-for (i in 1:ncol(west)) {
-  west_1year <- cbind(
-    west_1year,
-    "1" = 
-  )
-}
-fert[,1] <- seq(17.5, 47.5, 5)
-
-fert <- approx(fert[,1], fert[,2], xout = 1:150, yleft = 0, yright = 0)
-
-write.table(cdmltw(sex = "F")$nqx, file = "cdmltwF.txt")
-
-write.table(cdmltw(sex = "M")$nqx, file = "cdmltwM.txt")
+write.table(
+  interpolatePerYear(t(cdmltw(sex = "F")$nqx)), 
+  file = "cdmltwM.txt")
 
 # East
 
-write.table(cdmlte(sex = "F")$nqx, file = "cdmlteF.txt")
+write.table(
+  interpolatePerYear(t(cdmlte(sex = "F")$nqx)), 
+  file = "cdmlteF.txt")
 
-write.table(cdmlte(sex = "M")$nqx, file = "cdmlteM.txt")
+write.table(
+  interpolatePerYear(t(cdmlte(sex = "F")$nqx)), 
+  file = "cdmlteM.txt")
 
 # South
 
-write.table(cdmlts(sex = "F")$nqx, file = "cdmltsF.txt")
+write.table(
+  interpolatePerYear(t(cdmlts(sex = "F")$nqx)), 
+  file = "cdmltsF.txt")
 
-write.table(cdmlts(sex = "M")$nqx, file = "cdmltsM.txt")
+write.table(
+  interpolatePerYear(t(cdmlts(sex = "F")$nqx)), 
+  file = "cdmltsM.txt")
 
 # North
 
-write.table(cdmltn(sex = "F")$nqx, file = "cdmltnF.txt")
+write.table(
+  interpolatePerYear(t(cdmltn(sex = "F")$nqx)), 
+  file = "cdmltnF.txt")
 
-write.table(cdmltn(sex = "M")$nqx, file = "cdmltnM.txt")
+write.table(
+  interpolatePerYear(t(cdmltn(sex = "F")$nqx)), 
+  file = "cdmltnM.txt")

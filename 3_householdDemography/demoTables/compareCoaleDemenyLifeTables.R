@@ -14,56 +14,56 @@
 
 library(demogR)
 
-this.dir <- dirname(parent.frame(2)$ofile) # r file must be "sourced" for this to work in RStudio
-setwd(this.dir)
+#this.dir <- dirname(parent.frame(2)$ofile) # r file must be "sourced" for this to work in RStudio
+#setwd(this.dir)
 
 # load external data
-ext.dt <- list(
-  F = read.table("table_womenMortalityTable.txt", skip = 2, nrows = 21, sep = " "),
-  M = read.table("table_menMortalityTable.txt", skip = 2, nrows = 21, sep = " ")
-)
+# ext.dt <- list(
+#   F = read.table("table_womenMortalityTable.txt", skip = 2, nrows = 21, sep = " "),
+#   M = read.table("table_menMortalityTable.txt", skip = 2, nrows = 21, sep = " ")
+# )
 
 # set parameters (for building dataset and plotting)
 sex = "F"
 level = 3
-ageCohort = c(0, 1, seq(5, 95, by = 5))
+ages = 0:150
 submodel.col <- c("red", "green", "blue", "purple", "black")
 submodels.pch <- c(1, 2, 3, 4, 5)
 
 # build dataset
 dt <- data.frame(
-  cbind(
-    cbind(ageCohort, rep("west",     21), cdmltw(sex = sex)$nqx[level,]),
-    cbind(ageCohort, rep("east",     21), cdmlte(sex = sex)$nqx[level,]),
-    cbind(ageCohort, rep("south",    21), cdmlts(sex = sex)$nqx[level,]),
-    cbind(ageCohort, rep("north",    21), cdmltn(sex = sex)$nqx[level,]),
-    cbind(ageCohort, rep("ext.data", 21), ext.dt[[sex]][,2])
+  rbind(
+    cbind(ages, rep("west",     151), 
+          read.table(paste("cdmltw", sex, ".txt", sep = ""), sep = " ")[,level]
+          ),
+    cbind(ages, rep("east",     151),
+          read.table(paste("cdmlte", sex, ".txt", sep = ""), sep = " ")[,level]
+          ),
+    cbind(ages, rep("south",    151), 
+          read.table(paste("cdmlts", sex, ".txt", sep = ""), sep = " ")[,level]
+          ),
+    cbind(ages, rep("north",    151), 
+          read.table(paste("cdmltn", sex, ".txt", sep = ""), sep = " ")[,level]
+          )
   ))
 
-names(dt) <- c("ageCohort", "submodel", "nqx")
+names(dt) <- c("ages", "submodel", "nqx")
 
 dt$submodel <- factor(dt$submodel, 
-                      levels = c("west", "east", "south", "north", "ext.data"))
+                      levels = c("west", "east", "south", "north"))
 
-dt$ageCohort <- as.numeric(as.character(dt$ageCohort))
+dt$ages <- as.numeric(as.character(dt$ages))
 
-dt <- data.frame(
-  cbind(
-    ageCohort,
-    "west" = cdmltw(sex = sex)$nqx[level,],
-    "east" = cdmlte(sex = sex)$nqx[level,],
-    "south" = cdmlts(sex = sex)$nqx[level,],
-    "north" = cdmltn(sex = sex)$nqx[level,],
-    "ext.data" = ext.dt[[sex]][,2]
-  ))
+dt$nqx <- as.numeric(as.character(dt$nqx))
+
 
 # plot
-plot(dt$ageCohort, 0:max(dt[,2:ncol(dt)]), 
+plot(dt$ages, 0:max(dt$nqx), 
      type="n", 
      xlab = "age cohort", ylab = "mortality (nqx)")
 
 for (v in 2:ncol(dt)) {
-  lines(dt$ageCohort,
+  lines(dt$ages,
         dt[v], 
         col = submodel.col[v], pch=submodels.pch[v],
         type = "b")
