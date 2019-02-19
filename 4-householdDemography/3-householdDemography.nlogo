@@ -4,7 +4,8 @@
 
 ;;  <MODEL NAME>
 ;;  Copyright (C) <YEAR> <AUTHORS (EMAIL)>
-;;  Based on the 'householdDemography' template by Andreas Angourakis (andros.spica@gmail.com), 2018
+;;  Based on the 'Household Demography' template by Andreas Angourakis (andros.spica@gmail.com)
+;;  last update Feb 2019
 ;;  available at https://www.github.com/Andros-Spica/abm-templates
 ;;
 ;;  This program is free software: you can redistribute it and/or modify
@@ -100,6 +101,8 @@ to setup
 
   setup-households
 
+  reset-counters
+
   update-counters
 
   refresh-view
@@ -115,6 +118,9 @@ to set-parameters
 
   ; parameter set to default value (constant)
   set maturityAge 15
+
+  ; check parameters values
+  parameters-check1
 
   ;;; setup parameters depending on the type of experiment
   set householdInitialAgeDistribution read-from-string ( word "[" household-initial-age-distribution "]")
@@ -148,11 +154,33 @@ to set-parameters
   ]
 
   ; check parameters values
-  parameters-check
+  parameters-check2
 
 end
 
-to parameters-check
+to parameters-check1
+
+  ;;; check if values were reset to 0
+  ;;; and set default values
+  if (average-births-per-woman = 0)             [ set average-births-per-woman              8 ]
+  if (cdmlt-level = 0)                          [ set cdmlt-level                           8 ]
+  if (c1-women = 0)                             [ set c1-women                              0.9 ]
+  if (c1-men = 0)                               [ set c1-men                                0.85 ]
+  if (mu-women = 0)                             [ set mu-women                             15 ]
+  if (mu-men = 0)                               [ set mu-men                               20 ]
+  if (sigma1-women = 0)                         [ set sigma1-women                          5 ]
+  if (sigma1-men = 0)                           [ set sigma1-men                            2 ]
+  if (sigma2-women = 0)                         [ set sigma2-women                          2 ]
+  if (sigma2-men = 0)                           [ set sigma2-men                           10 ]
+
+  ;;; string type inputs (vector of values)
+  if (initial-num-households = 0)               [ set initial-num-households               25 ]
+  if (household-initial-age-distribution = "0")   [ set household-initial-age-distribution   "0 30" ]
+  if (max-couple-count-distribution = "0")        [ set max-couple-count-distribution        "1 6" ]
+
+end
+
+to parameters-check2
 
   ;;; initial parameter check (e.g., avoiding division per zero error)
   check-par-is-positive "initialNumHouseholds" initialNumHouseholds
@@ -194,9 +222,6 @@ to setup-households
       hh_initialise
     ]
   ]
-
-  ; do not consider counters during setup
-  reset-counters
 
 end
 
@@ -1052,8 +1077,9 @@ to-report load-nuptiality-model-table [ isFemale ]
 
   ;;; The following correspond to the first parametric model
   ;;; for fitting the age-specific distributions of marriages, mentioned in page 133 of:
-  ;;; Peristeva and Kostaki
+  ;;; Peristeva and Kostaki (2015)
   ;;; "A parametric model for estimating nuptiality patterns in modern populations"
+  ;;; Canadian studies in population 42(2):130-148. DOI: 10.25336/P6TK56
   ;;; Available from: https://www.researchgate.net/publication/285457704_A_parametric_model_for_estimating_nuptiality_patterns_in_modern_populations [accessed Nov 27 2018].
   ;;; use "demoTables/compareNuptialityModel.R" to test shapes
 
@@ -1563,10 +1589,10 @@ PENS
 "default" 1.0 1 -16777216 true "" "histogram [hh_count-couples] of households"
 
 CHOOSER
-5
-208
-162
-253
+400
+633
+557
+678
 residence-rule
 residence-rule
 "patrilocal-patrilineal" "matrilocal-matrilineal"

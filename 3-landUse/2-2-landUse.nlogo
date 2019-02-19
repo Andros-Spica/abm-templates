@@ -4,7 +4,8 @@
 
 ;;  <MODEL NAME>
 ;;  Copyright (C) <YEAR> <AUTHORS (EMAIL)>
-;;  Based on the 'landUseABM' template by Andreas Angourakis (andros.spica@gmail.com), 2018
+;;  Based on the 'Land Use' template by Andreas Angourakis (andros.spica@gmail.com)
+;;  last update Feb 2019
 ;;  available at https://www.github.com/Andros-Spica/abm-templates
 ;;
 ;;  This program is free software: you can redistribute it and/or modify
@@ -46,25 +47,25 @@ globals
   maxDist
 
   ;;; modified parameters
-  ; general
+  ;;;; general
   intGrowth
   extGrowth
   initLandUse
   initGroups
 
-  ; spatial relations
+  ;;;; spatial relations
   disPenGr
   maxDistInitGroupsToNearestCore
   maxDistBetweenInitGroups
 
-  ; land use potential
+  ;;;; land use potential
   maxPotential
   numCores
   potentialGr
   numNullBodies
   numNullPatches
 
-  ; group dynamics
+  ;;;; group dynamics
   effectivenessGr
   maxGroupChangeRate
 
@@ -104,7 +105,8 @@ groups-own
   flag
   groupSize groupEffectiveness
   groupIntensity groupIntensity
-  ; helpers
+
+  ;;;; auxiliar
   groupDemand
   groupDemandRemain
 ]
@@ -113,6 +115,8 @@ patches-own
 [
   potential nearestCore intensity
   landUse myGroup
+
+  ;;;; auxiliar
   contenders
 ]
 
@@ -167,7 +171,7 @@ to set-parameters
   ;;; setup parameters depending on the type of experiment
   if (typeOfExperiment = "user-defined")
   [
-    ;;; use values from user interface as a maximum for random uniform distributions
+    ;;; load parameters from user interface
     ; general
     set intGrowth intrinsic_growth_rate
     set extGrowth extrinsic_growth_rate
@@ -188,7 +192,7 @@ to set-parameters
   ]
   if (typeOfExperiment = "random")
   [
-    ;;; load parameters from user interface
+    ;;; use values from user interface as a maximum for random uniform distributions
     ; general
     set intGrowth intrinsic_growth_rate
     set extGrowth extrinsic_growth_rate
@@ -220,6 +224,24 @@ to set-parameters
 end
 
 to parameters-check-1
+
+  ;;; check if values were reset to 0
+  ;;; and set default values
+  if (endSimulation = 0)                        [ set endSimulation                      1000 ]
+  if (init_%landUse = 0)                        [ set init_%landUse                        20 ]
+  if (initial_number_groups = 0)                [ set initial_number_groups                 5 ]
+  if (intrinsic_growth_rate = 0)                [ set intrinsic_growth_rate                 0.01 ]
+  if (extrinsic_growth_rate = 0)                [ set extrinsic_growth_rate                 0.001 ]
+  if (max_%distance_initial_groups_core = 0)    [ set max_%distance_initial_groups_core    33 ]
+  if (max_%distance_between_initial_groups = 0) [ set max_%distance_between_initial_groups 33 ]
+  if (num_cores = 0)                            [ set num_cores                             5 ]
+  if (max_potential = 0)                        [ set max_potential                        10 ]
+  if (potential_decay_gradient = 0)             [ set potential_decay_gradient             20 ]
+  if (num_null_bodies = 0)                      [ set num_null_bodies                       3 ]
+  if (num_null_patches = 0)                     [ set num_null_patches                     20 ]
+  if (distance_penalty_gradient = 0)            [ set distance_penalty_gradient            20 ]
+  if (effectiveness_gradient = 0)               [ set effectiveness_gradient               20 ]
+  if (max_group_change_rate = 0)                [ set max_group_change_rate                 3 ]
 
   ;;; initial parameter check (avoiding division per zero error
   check-par-is-positive "distance_penalty_gradient" distance_penalty_gradient
@@ -266,7 +288,7 @@ end
 to create-core-patches
 
   ;;; create cores
-  set cores nobody
+  set cores (patch-set)
 
   ; points
   if (layout-scenario = "point cores")
@@ -301,7 +323,7 @@ to create-point-cores
 
   repeat numCores
   [
-    ifelse (cores = nobody)
+    ifelse (not any? cores)
     [
       set aCore one-of patches
     ]
@@ -317,7 +339,7 @@ to create-line-cores
 
   repeat numCores
   [
-    ifelse (cores = nobody)
+    ifelse (not any? cores)
     [
       set aCore one-of patches
     ]
@@ -359,11 +381,11 @@ end
 to create-null-patches
 
   let aNullPatch nobody
-  let nullPatches nobody
+  let nullPatches (patch-set)
   ;;; create null bodies
   repeat numNullBodies
   [
-		ifelse (nullPatches = nobody)
+		ifelse (not any? nullPatches)
     [
       set aNullPatch one-of patches
     ]
@@ -675,7 +697,7 @@ to change_groups
     ;;; to change groups, possibly forming a new group
     let me self
     let myLand patches with [myGroup = me]
-    let newGroupPatches (patch-set nobody)
+    let newGroupPatches (patch-set)
     ask myLand [
       if ( random-float 1 < maxGroupChangeRate * (1 - ([groupIntensity * groupEffectiveness] of myGroup) * get-value-in-gradient (distance myGroup) disPenGr maxDist))
       [
@@ -1127,7 +1149,7 @@ NIL
 T
 OBSERVER
 NIL
-NIL
+1
 NIL
 NIL
 1
@@ -1144,7 +1166,7 @@ NIL
 T
 OBSERVER
 NIL
-NIL
+2
 NIL
 NIL
 0
@@ -1161,7 +1183,7 @@ T
 T
 OBSERVER
 NIL
-NIL
+3
 NIL
 NIL
 0
@@ -1444,18 +1466,18 @@ disPenGr
 SWITCH
 7
 230
-126
+148
 263
 mark-territory?
 mark-territory?
-1
+0
 1
 -1000
 
 SWITCH
 6
 263
-125
+147
 296
 hide-centers?
 hide-centers?
@@ -1959,7 +1981,7 @@ INPUTBOX
 88
 144
 endSimulation
-0.0
+1000.0
 1
 0
 Number

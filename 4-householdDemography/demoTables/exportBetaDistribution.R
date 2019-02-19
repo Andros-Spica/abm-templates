@@ -1,5 +1,5 @@
 ######################################################################
-# Script to generate a standard shape of the age-specific fertility rate
+# Script to generate and export a standard shape of the age-specific fertility rate
 # 'ASFR' (probabilities for a woman to give birth between at age i)
 # from a beta distribution
 # approach taken from Peter Ellis

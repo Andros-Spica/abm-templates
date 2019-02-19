@@ -4,7 +4,8 @@
 
 ;;  <MODEL NAME>
 ;;  Copyright (C) <YEAR> <AUTHORS (EMAIL)>
-;;  Based on the 'basic' template by Andreas Angourakis (andros.spica@gmail.com), 2018
+;;  Based on the 'Growers' template by Andreas Angourakis (andros.spica@gmail.com)
+;;  last update Feb 2019
 ;;  available at https://www.github.com/Andros-Spica/abm-templates
 ;;
 ;;  This program is free software: you can redistribute it and/or modify
@@ -24,7 +25,7 @@
 ;;;;; BREEDS ;;;;
 ;;;;;;;;;;;;;;;;;
 
-breed [ agentsA agentA ]
+breed [ growers grower ]
 
 ;;;;;;;;;;;;;;;;;
 ;;; VARIABLES ;;;
@@ -37,28 +38,31 @@ globals
   maxDist
 
   ;;; modified parameters
-  modDiscParameter
-  modContParameter
+  initGrowers
+  maxGrowthRate
 
   ;;; variables
   ;;;; auxiliar
-  auxVariable
+  stochasticFactor-time
 
   ;;;; counters and final measures
-  counterVariable
-  statsVariable
+  numberOfGrowers
+  density
+  mean-growth-rate
 ]
 
 ;;; agents variables
 
-agentsA-own
+growers-own
 [
-  agentVariable
+  linneage
+  currentGrowthRate
+  separationIndex
 ]
 
 patches-own
 [
-  patchVariable
+  stochasticFactor-space
 ]
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -75,7 +79,7 @@ to setup
 
   setup-patches
 
-  setup-agentsA
+  setup-growers
 
   update-counters
 
@@ -98,33 +102,36 @@ end
 
 to set-parameters
 
-  ; set random seed
   random-seed SEED
 
-  ;;; setup parameters depending on the type of experiment
+  ;;; set parameters
   if (experiment-type = "user-defined")
   [
     ;;; load parameters from user interface
-    set modDiscParameter discrete-parameter
-    set modContParameter continuous-parameter
+    set initGrowers init-growers
+    set maxGrowthRate max-growth-rate
   ]
   if (experiment-type = "random")
   [
     ;;; use values from user interface as a maximum for random uniform distributions
-    set modDiscParameter 1 + random modDiscParameter ; at least one grower
-    set modContParameter 1E-6 + random-float modContParameter ; at least very small a minimun grow rate
+    set initGrowers 1 + random init-growers ; at least one grower
+    set maxGrowthRate 1E-6 + random-float max-growth-rate ; at least very small a minimun grow rate
   ]
 
-  ; check parameters values
   parameters-check
 
 end
 
 to parameters-check
 
+  ;;; check if values were reset to 0 (NetLogo does that from time to time...!)
+  ;;; and set default values (assuming they are not 0)
+  if (initGrowers = 0)      [ set initGrowers     20 ]
+  if (maxGrowthRate = 0)    [ set maxGrowthRate    0.005 ]
+
   ;;; initial parameter check (e.g., avoiding division per zero error)
-  check-par-is-positive "modDiscParameter" modDiscParameter
-  check-par-is-positive "modContParameter" modContParameter
+  check-par-is-positive "initGrowers" initGrowers
+  check-par-is-positive "maxGrowthRate" maxGrowthRate
 
 end
 
@@ -140,26 +147,46 @@ end
 
 to setup-patches
 
-  ;;; set patches variables
+  set-stochastic-factor-time ; reset every time step
+
+  ;;; set patches potential
   ask patches
   [
-    set patchVariable random-float 1
+    set stochasticFactor-space random-float 1 ; set only at start of simulation
   ]
 
 end
 
-to setup-agentsA
+to setup-growers
 
-  ;;; create agents
-  ask n-of modDiscParameter patches
+  ;;; create growers
+  let i 0
+  ask n-of initGrowers patches
   [
-    sprout-agentsA 1
+    sprout-growers 1
     [
-      set agentVariable random-float 1
+      set linneage i
 
-      set size 0.5 + 2.5 * agentVariable
+      set color random-float 140
+      if (color mod 10 < 2)
+      [ set color color + 2 ] ; avoid very dark
+      if (color mod 10 > 8)
+      [ set color color - 2 ] ; avoid very bright
     ]
+    set i i + 1
   ]
+
+  ask growers
+  [
+    update-mean-dist-to-growers
+    update-growth-rate
+  ]
+
+end
+
+to set-stochastic-factor-time
+
+  set stochasticFactor-time random-float 1
 
 end
 
@@ -169,9 +196,11 @@ end
 
 to go
 
-  do-something-with-patches
+  grow-growers
 
-  do-something-with-agents
+  move-growers
+
+  remove-growers
 
   update-counters
 
@@ -183,44 +212,74 @@ end
 
 ;;; GLOBAL ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-to do-something-with-patches
+to grow-growers
 
-  ask patches
+  ask growers
   [
-    patch-procedure
+    grow
   ]
 
 end
 
-to do-something-with-agents
+to move-growers
 
-  ask agentsA
+  ask growers
   [
-    agent-procedure
+    move-to min-one-of neighbors [count growers-here] ; growers try to find less overcrowded patches
   ]
 
 end
 
-;;; PATCHES ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+to remove-growers
 
-to patch-procedure
+  ask growers
+  [
+    let overcrowdingStress [1 - (1 / (count growers-here))] of patch-here ; very simple density dependent effect
 
-  ifelse (any? agentsA-here)
-  [
-    set patchVariable max (list 1 (patchVariable + modContParameter * sum [agentVariable] of agentsA-here))
-  ]
-  [
-    set patchVariable min (list 1E-6 (patchVariable - modContParameter * sum [agentVariable] of agentsA-here))
+    if (random-float 1 < overcrowdingStress) [ die ]
   ]
 
 end
 
-;;; AGENTS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; GROWERS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-to agent-procedure
+to grow
 
-  face one-of neighbors
-  fd [patchVariable] of patch-here
+  update-mean-dist-to-growers
+
+  update-growth-rate
+
+  ; use growth rate as probability of duplication
+  if (random-float 1 < currentGrowthRate)
+  [
+    hatch-growers 1
+  ]
+
+end
+
+to update-mean-dist-to-growers
+
+  let me self
+  let sumDistanceToGrowers 0
+
+  ask other growers
+  [
+    set sumDistanceToGrowers sumDistanceToGrowers + (distance me)
+  ]
+
+  let meanDistanceToGrowers sumDistanceToGrowers / (count other growers)
+
+  set separationIndex meanDistanceToGrowers / maxDist
+
+end
+
+to update-growth-rate
+
+  set currentGrowthRate
+    maxGrowthRate                              ; maximum growth rate in this simulation
+    * stochasticFactor-time                    ; variation in time, for all patches
+    * [stochasticFactor-space] of patch-here   ; variation in space, patch-specific
+    * separationIndex                          ; how separated this grower is from others
 
 end
 
@@ -230,8 +289,9 @@ end
 
 to update-counters
 
-  set counterVariable count agentsA
-  set statsVariable mean [patchVariable] of patches
+  set numberOfGrowers count growers
+  set density numberOfGrowers / totalPatches
+  set mean-growth-rate mean [currentGrowthRate] of growers
 
 end
 
@@ -243,7 +303,7 @@ to refresh-view
 
   ask patches
   [
-    set pcolor 62 + 6 * patchVariable
+    set pcolor 62 + 6 * stochasticFactor-space * stochasticFactor-time
   ]
 
 end
@@ -251,11 +311,11 @@ end
 GRAPHICS-WINDOW
 193
 10
-505
-323
+531
+349
 -1
 -1
-16.0
+30.0
 1
 10
 1
@@ -265,10 +325,10 @@ GRAPHICS-WINDOW
 1
 1
 1
--9
-9
--9
-9
+-5
+5
+-5
+5
 0
 0
 1
@@ -278,7 +338,7 @@ ticks
 BUTTON
 16
 26
-79
+71
 59
 NIL
 setup
@@ -287,16 +347,16 @@ NIL
 T
 OBSERVER
 NIL
-NIL
+1
 NIL
 NIL
 1
 
 BUTTON
-98
-27
-161
-60
+129
+26
+184
+59
 NIL
 go
 T
@@ -304,64 +364,81 @@ T
 T
 OBSERVER
 NIL
+3
 NIL
+NIL
+1
+
+BUTTON
+73
+26
+128
+59
+NIL
+go
+NIL
+1
+T
+OBSERVER
+NIL
+2
 NIL
 NIL
 1
 
 INPUTBOX
-12
-68
-112
-128
+23
+70
+123
+130
 SEED
-2.0
+0.0
 1
 0
 Number
 
 CHOOSER
-13
-136
-151
-181
+24
+138
+162
+183
 experiment-type
 experiment-type
 "user-defined" "random"
-0
+1
 
 INPUTBOX
-12
-189
-87
-249
-discrete-parameter
+23
+191
+98
+251
+init-growers
 20.0
 1
 0
 Number
 
 SLIDER
-10
-259
-179
-292
-continuous-parameter
-continuous-parameter
+21
+261
+193
+294
+max-growth-rate
+max-growth-rate
 0
 0.02
-1.0E-5
-0.00001
+0.005
+0.001
 1
 NIL
 HORIZONTAL
 
 PLOT
-293
-351
-493
-471
-patchVariable
+533
+11
+733
+131
+Growers
 NIL
 NIL
 0.0
@@ -370,9 +447,63 @@ NIL
 10.0
 true
 false
-"set-histogram-num-bars 20\nset-plot-x-range -0.01 1.01" "set-histogram-num-bars 20\nset-plot-x-range -0.01 1.01"
+"" ""
 PENS
-"default" 1.0 1 -16777216 true "" "histogram [patchVariable] of patches"
+"count" 1.0 0 -16777216 true "" "plot numberOfGrowers"
+
+PLOT
+533
+133
+733
+253
+Density
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -5298144 true "set-plot-y-range -0.01 1.01" "plot density"
+
+PLOT
+533
+252
+734
+372
+Average growth rate
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"set-plot-y-range (-0.0001 + precision (max [currentGrowthRate] of growers) 4) (0.0001 + precision (max [currentGrowthRate] of growers) 4)" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot mean-growth-rate"
+
+PLOT
+535
+373
+735
+493
+Growth rates
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"set-histogram-num-bars 20\nset-plot-x-range -0.01 (0.001 + max [currentGrowthRate] of growers)" "set-histogram-num-bars 20\nset-plot-x-range -0.01 (0.001 + max [currentGrowthRate] of growers)"
+PENS
+"default" 1.0 1 -16777216 true "" "histogram [currentGrowthRate] of growers"
 
 MONITOR
 193
@@ -386,12 +517,12 @@ totalPatches
 11
 
 MONITOR
-92
-202
-193
-247
+100
+200
+175
+245
 NIL
-modDiscParameter
+initGrowers
 0
 1
 11
@@ -399,10 +530,10 @@ modDiscParameter
 MONITOR
 51
 297
-155
+154
 342
 NIL
-modContParameter
+maxGrowthRate
 5
 1
 11
