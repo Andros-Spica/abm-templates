@@ -97,28 +97,28 @@ end
 to set-parameters
 
   ; set random seed
-  random-seed SEED
+  random-seed seed
 
   parameters-check-1
 
   ;;; setup parameters depending on the type of experiment
-  if (typeOfExperiment = "user-defined")
+  if (type-of-experiment = "user-defined")
   [
     ;;; use values from user interface as a maximum for random uniform distributions
-    set maxPotential max_potential
-    set numCores num_cores
-    set potentialGr potential_decay_gradient
-    set numNullBodies num_null_bodies
-	  set numNullPatches round (num_null_patches * (count patches) / 100)
+    set maxPotential max-potential
+    set numCores num-cores
+    set potentialGr potential-decay-gradient
+    set numNullBodies num-null-bodies
+	  set numNullPatches round (num-null-patches * (count patches) / 100)
   ]
-  if (typeOfExperiment = "random")
+  if (type-of-experiment = "random")
   [
     ;;; load parameters from user interface
-    set maxPotential 1 + random max_potential
-    set numCores 1 + random num_cores
-    set potentialGr random-gamma 2 (1 / potential_decay_gradient)
-    set numNullBodies random (1 + num_null_bodies)
-	  set numNullPatches (count patches) * random (1 + num_null_patches) / 100
+    set maxPotential 1 + random max-potential
+    set numCores 1 + random num-cores
+    set potentialGr random-gamma 2 (1 / potential-decay-gradient)
+    set numNullBodies random (1 + num-null-bodies)
+	  set numNullPatches (count patches) * random (1 + num-null-patches) / 100
   ]
 
   parameters-check-2
@@ -128,7 +128,7 @@ end
 to parameters-check-1
 
   ;;; initial parameter check (avoiding division per zero error
-  check-par-is-positive "potential_decay_gradient" potential_decay_gradient
+  check-par-is-positive "potential-decay-gradient" potential-decay-gradient
 
 end
 
@@ -414,7 +414,7 @@ INPUTBOX
 269
 76
 329
-num_cores
+num-cores
 3.0
 1
 0
@@ -425,8 +425,8 @@ SLIDER
 231
 263
 264
-potential_decay_gradient
-potential_decay_gradient
+potential-decay-gradient
+potential-decay-gradient
 0
 100
 16.0
@@ -440,7 +440,7 @@ INPUTBOX
 268
 199
 328
-max_potential
+max-potential
 20.0
 1
 0
@@ -451,7 +451,7 @@ INPUTBOX
 381
 105
 441
-num_null_bodies
+num-null-bodies
 3.0
 1
 0
@@ -472,8 +472,8 @@ SLIDER
 379
 275
 412
-num_null_patches
-num_null_patches
+num-null-patches
+num-null-patches
 0
 100
 10.0
@@ -580,8 +580,8 @@ CHOOSER
 39
 149
 84
-typeOfExperiment
-typeOfExperiment
+type-of-experiment
+type-of-experiment
 "random" "user-defined"
 1
 

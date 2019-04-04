@@ -43,12 +43,12 @@ globals
 
   ;;; variables
   ;;;; auxiliar
-  stochasticFactor-time
+  stochasticFactorTime
 
   ;;;; counters and final measures
   numberOfGrowers
   density
-  mean-growth-rate
+  meanGrowthRate
 ]
 
 ;;; agents variables
@@ -62,7 +62,7 @@ growers-own
 
 patches-own
 [
-  stochasticFactor-space
+  stochasticFactorSpace
 ]
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -102,16 +102,16 @@ end
 
 to set-parameters
 
-  random-seed SEED
+  random-seed seed
 
   ;;; set parameters
-  if (experiment-type = "user-defined")
+  if (type-of-experiment = "user-defined")
   [
     ;;; load parameters from user interface
     set initGrowers init-growers
     set maxGrowthRate max-growth-rate
   ]
-  if (experiment-type = "random")
+  if (type-of-experiment = "random")
   [
     ;;; use values from user interface as a maximum for random uniform distributions
     set initGrowers 1 + random init-growers ; at least one grower
@@ -152,7 +152,7 @@ to setup-patches
   ;;; set patches potential
   ask patches
   [
-    set stochasticFactor-space random-float 1 ; set only at start of simulation
+    set stochasticFactorSpace random-float 1 ; set only at start of simulation
   ]
 
 end
@@ -186,7 +186,7 @@ end
 
 to set-stochastic-factor-time
 
-  set stochasticFactor-time random-float 1
+  set stochasticFactorTime random-float 1
 
 end
 
@@ -277,8 +277,8 @@ to update-growth-rate
 
   set currentGrowthRate
     maxGrowthRate                              ; maximum growth rate in this simulation
-    * stochasticFactor-time                    ; variation in time, for all patches
-    * [stochasticFactor-space] of patch-here   ; variation in space, patch-specific
+    * stochasticFactorTime                     ; variation in time, for all patches
+    * [stochasticFactorSpace] of patch-here    ; variation in space, patch-specific
     * separationIndex                          ; how separated this grower is from others
 
 end
@@ -291,7 +291,7 @@ to update-counters
 
   set numberOfGrowers count growers
   set density numberOfGrowers / totalPatches
-  set mean-growth-rate mean [currentGrowthRate] of growers
+  set meanGrowthRate mean [currentGrowthRate] of growers
 
 end
 
@@ -303,7 +303,7 @@ to refresh-view
 
   ask patches
   [
-    set pcolor 62 + 6 * stochasticFactor-space * stochasticFactor-time
+    set pcolor 62 + 6 * stochasticFactorSpace * stochasticFactorTime
   ]
 
 end
@@ -391,7 +391,7 @@ INPUTBOX
 70
 123
 130
-SEED
+seed
 0.0
 1
 0
@@ -402,8 +402,8 @@ CHOOSER
 138
 162
 183
-experiment-type
-experiment-type
+type-of-experiment
+type-of-experiment
 "user-defined" "random"
 1
 
@@ -485,7 +485,7 @@ true
 false
 "set-plot-y-range (-0.0001 + precision (max [currentGrowthRate] of growers) 4) (0.0001 + precision (max [currentGrowthRate] of growers) 4)" ""
 PENS
-"default" 1.0 0 -16777216 true "" "plot mean-growth-rate"
+"default" 1.0 0 -16777216 true "" "plot meanGrowthRate"
 
 PLOT
 535

@@ -71,14 +71,14 @@ globals
 
   ;;; variables
   ;;;; auxiliar
-  display_modeLabelLimit
+  display-modeLabelLimit
   cores
   defender
   contender
   indepOfCont
-  index_of_opportunity
-  ratio_of_intensities
-  incentives_to_relinquish
+  indexOfOpportunity
+  ratioOfIntensities
+  incentivesToRelinquish
 
   ;;;; counters and final measures
   landUsePotential
@@ -103,8 +103,9 @@ globals
 groups-own
 [
   flag
-  groupSize groupEffectiveness
-  groupIntensity groupIntensity
+  groupSize
+  groupEffectiveness
+  groupIntensity
 
   ;;;; auxiliar
   groupDemand
@@ -113,8 +114,11 @@ groups-own
 
 patches-own
 [
-  potential nearestCore intensity
-  landUse myGroup
+  potential
+  nearestCore
+  intensity
+  landUse
+  myGroup
 
   ;;;; auxiliar
   contenders
@@ -169,52 +173,52 @@ to set-parameters
   parameters-check-1
 
   ;;; setup parameters depending on the type of experiment
-  if (typeOfExperiment = "user-defined")
+  if (type-of-experiment = "user-defined")
   [
     ;;; load parameters from user interface
     ; general
-    set intGrowth intrinsic_growth_rate
-    set extGrowth extrinsic_growth_rate
-    set initLandUse round ( init_%landUse * (count patches) / 100)
-	  set initGroups initial_number_groups
+    set intGrowth intrinsic-growth-rate
+    set extGrowth extrinsic-growth-rate
+    set initLandUse round ( init-%landUse * (count patches) / 100)
+	  set initGroups initial-number-groups
     ; spatial relations
-    set disPenGr distance_penalty_gradient
-    set maxDistInitGroupsToNearestCore (max_%distance_initial_groups_core * (sqrt ((max-pxcor ^ 2) + (max-pycor ^ 2))) / 100)
-    set maxDistBetweenInitGroups (max_%distance_between_initial_groups * (sqrt ((max-pxcor ^ 2) + (max-pycor ^ 2))) / 100)
+    set disPenGr distance-penalty-gradient
+    set maxDistInitGroupsToNearestCore (max-%distance-initial-groups-core * (sqrt ((max-pxcor ^ 2) + (max-pycor ^ 2))) / 100)
+    set maxDistBetweenInitGroups (max-%distance-between-initial-groups * (sqrt ((max-pxcor ^ 2) + (max-pycor ^ 2))) / 100)
     ; land use potential
-    set maxPotential max_potential
-    set numCores num_cores
-    set potentialGr potential_decay_gradient
-    set numNullBodies num_null_bodies
-	  set numNullPatches round (num_null_patches * (count patches) / 100)
-    set effectivenessGr effectiveness_gradient
-    set maxGroupChangeRate max_group_change_rate
+    set maxPotential max-potential
+    set numCores num-cores
+    set potentialGr potential-decay-gradient
+    set numNullBodies num-null-bodies
+	  set numNullPatches round (num-null-patches * (count patches) / 100)
+    set effectivenessGr effectiveness-gradient
+    set maxGroupChangeRate max-group-change-rate
   ]
-  if (typeOfExperiment = "random")
+  if (type-of-experiment = "random")
   [
     ;;; use values from user interface as a maximum for random uniform distributions
     ; general
-    set intGrowth intrinsic_growth_rate
-    set extGrowth extrinsic_growth_rate
-    set initLandUse round ( (random-float init_%landUse) * (count patches) / 100)
-	  set initGroups 1 + random initial_number_groups
+    set intGrowth intrinsic-growth-rate
+    set extGrowth extrinsic-growth-rate
+    set initLandUse round ( (random-float init-%landUse) * (count patches) / 100)
+	  set initGroups 1 + random initial-number-groups
 	  ; spatial relations
-    set disPenGr 0.01 + random-float 99.99 ; random-gamma 2 (1 / distance_penalty_gradient)
-    set maxDistInitGroupsToNearestCore 25 + random (max_%distance_initial_groups_core - 25)
-    set maxDistBetweenInitGroups 20 + random (max_%distance_between_initial_groups - 20)
+    set disPenGr 0.01 + random-float 99.99 ; random-gamma 2 (1 / distance-penalty-gradient)
+    set maxDistInitGroupsToNearestCore 25 + random (max-%distance-initial-groups-core - 25)
+    set maxDistBetweenInitGroups 20 + random (max-%distance-between-initial-groups - 20)
     set maxDistInitGroupsToNearestCore (maxDistInitGroupsToNearestCore * (sqrt ((max-pxcor ^ 2) + (max-pycor ^ 2))) / 100)
     set maxDistBetweenInitGroups (maxDistBetweenInitGroups * (sqrt ((max-pxcor ^ 2) + (max-pycor ^ 2))) / 100)
 	  ; land use potential
-    set maxPotential 1 + random max_potential
-    set numCores 1 + random num_cores
-    set potentialGr random-gamma 2 (1 / potential_decay_gradient)
-    set numNullBodies random (1 + num_null_bodies)
-	  set numNullPatches (count patches) * random (1 + num_null_patches) / 100
+    set maxPotential 1 + random max-potential
+    set numCores 1 + random num-cores
+    set potentialGr random-gamma 2 (1 / potential-decay-gradient)
+    set numNullBodies random (1 + num-null-bodies)
+	  set numNullPatches (count patches) * random (1 + num-null-patches) / 100
     ; group dynamics
     set effectivenessGr 0.01 + random-float 99.99
-    set maxGroupChangeRate random-float max_group_change_rate
+    set maxGroupChangeRate random-float max-group-change-rate
   ]
-  if (typeOfExperiment = "defined by expNumber")
+  if (type-of-experiment = "defined by experiment-number")
   [
     ;load-experiment
   ]
@@ -227,25 +231,25 @@ to parameters-check-1
 
   ;;; check if values were reset to 0
   ;;; and set default values
-  if (endSimulation = 0)                        [ set endSimulation                      1000 ]
-  if (init_%landUse = 0)                        [ set init_%landUse                        20 ]
-  if (initial_number_groups = 0)                [ set initial_number_groups                 5 ]
-  if (intrinsic_growth_rate = 0)                [ set intrinsic_growth_rate                 0.01 ]
-  if (extrinsic_growth_rate = 0)                [ set extrinsic_growth_rate                 0.001 ]
-  if (max_%distance_initial_groups_core = 0)    [ set max_%distance_initial_groups_core    33 ]
-  if (max_%distance_between_initial_groups = 0) [ set max_%distance_between_initial_groups 33 ]
-  if (num_cores = 0)                            [ set num_cores                             5 ]
-  if (max_potential = 0)                        [ set max_potential                        10 ]
-  if (potential_decay_gradient = 0)             [ set potential_decay_gradient             20 ]
-  if (num_null_bodies = 0)                      [ set num_null_bodies                       3 ]
-  if (num_null_patches = 0)                     [ set num_null_patches                     20 ]
-  if (distance_penalty_gradient = 0)            [ set distance_penalty_gradient            20 ]
-  if (effectiveness_gradient = 0)               [ set effectiveness_gradient               20 ]
-  if (max_group_change_rate = 0)                [ set max_group_change_rate                 3 ]
+  if (end-simulation-in-tick = 0)               [ set end-simulation-in-tick             1000 ]
+  if (init-%landUse = 0)                        [ set init-%landUse                        20 ]
+  if (initial-number-groups = 0)                [ set initial-number-groups                 5 ]
+  if (intrinsic-growth-rate = 0)                [ set intrinsic-growth-rate                 0.01 ]
+  if (extrinsic-growth-rate = 0)                [ set extrinsic-growth-rate                 0.001 ]
+  if (max-%distance-initial-groups-core = 0)    [ set max-%distance-initial-groups-core    33 ]
+  if (max-%distance-between-initial-groups = 0) [ set max-%distance-between-initial-groups 33 ]
+  if (num-cores = 0)                            [ set num-cores                             5 ]
+  if (max-potential = 0)                        [ set max-potential                        10 ]
+  if (potential-decay-gradient = 0)             [ set potential-decay-gradient             20 ]
+  if (num-null-bodies = 0)                      [ set num-null-bodies                       3 ]
+  if (num-null-patches = 0)                     [ set num-null-patches                     20 ]
+  if (distance-penalty-gradient = 0)            [ set distance-penalty-gradient            20 ]
+  if (effectiveness-gradient = 0)               [ set effectiveness-gradient               20 ]
+  if (max-group-change-rate = 0)                [ set max-group-change-rate                 3 ]
 
   ;;; initial parameter check (avoiding division per zero error
-  check-par-is-positive "distance_penalty_gradient" distance_penalty_gradient
-  check-par-is-positive "potential_decay_gradient" potential_decay_gradient
+  check-par-is-positive "distance-penalty-gradient" distance-penalty-gradient
+  check-par-is-positive "potential-decay-gradient" potential-decay-gradient
 
 end
 
@@ -479,6 +483,12 @@ to setup-LandUse
         ]
       ]
     ]
+
+    ask groups
+    [
+      let thisGroup self
+      set groupIntensity sum [intensity] of patches with [myGroup = thisGroup]
+    ]
   ]
 
 end
@@ -487,7 +497,7 @@ to setup-display-labels
 
   ask patch (min-pxcor + round ((max-pxcor - min-pxcor) * 0.97) ) (min-pycor + round ((max-pycor - min-pycor) * 0.97) )
   [
-    sprout-labelpositions 1 [ set name "display mode" set label display_mode set shape "invisible" ]
+    sprout-labelpositions 1 [ set name "display mode" set label display-mode set shape "invisible" ]
   ]
   ask patch (min-pxcor + round ((max-pxcor - min-pxcor) * 0.97) ) (min-pycor + round ((max-pycor - min-pycor) * 0.03) )
   [
@@ -519,7 +529,7 @@ to go
 
   check-competition
 
-  change_groups
+  change-groups
 
   update-counters
 
@@ -528,7 +538,7 @@ to go
   tick
 
   if (display-labels = true) [ ask labelpositions with [ name = "time" ] [ set label (word "time: " ticks) ] ]
-  if (ticks = endSimulation) [stop]
+  if (ticks = end-simulation-in-tick) [stop]
 
 end
 
@@ -658,12 +668,12 @@ to resolve-competition
   let supportCon ( [groupIntensity * groupEffectiveness] of contender ) * get-value-in-gradient (distance contender) disPenGr maxDist
 ;  print (word "supportDef: " supportDef " ; supportCon: " supportCon)
   ;;; a contender is the one attempting to expand, thus it is the one to make a informed decision
-  set ratio_of_intensities  (supportCon /(supportCon + supportDef))
+  set ratioOfIntensities  (supportCon /(supportCon + supportDef))
 
 ;  print (word defender " vs " contender " in " [patch-here] of defender )
 
   ;;; Does the competitive situation evolves into land use change event?
-  ifelse ( random-float 1 < ratio_of_intensities)
+  ifelse ( random-float 1 < ratioOfIntensities)
   [
     ;;; extending whichever land use is encouraged
     set myGroup contender
@@ -689,7 +699,7 @@ to resolve-competition
 
 end
 
-to change_groups
+to change-groups
 
   ask groups [
     ;;; each patch of a group will assess their will (maxGroupChangeRate)
@@ -740,7 +750,7 @@ to update-groups
 
     set groupSize count patches with [ myGroup = me ]
 
-    set groupIntensity sum [intensity] of patches with [myGroup = myself and landUse = true]
+    set groupIntensity sum [intensity] of patches with [myGroup = me and landUse = true]
 
     set groupEffectiveness get-value-in-gradient groupIntensity effectivenessGr (sum [potential] of patches)
   ]
@@ -780,7 +790,7 @@ end
 
 to refresh-view
 
-  set display_modeLabelLimit 0
+  set display-modeLabelLimit 0
 
   refresh-to-display-mode
 
@@ -795,7 +805,7 @@ end
 to refresh-to-display-mode
 
   ;;; set patch color depending on the display mode selector
-  if (display_mode = "land use potential")
+  if (display-mode = "land use potential")
   [
     ask patches [
       let potLevel ((maxPotential - potential) / maxPotential)
@@ -809,9 +819,9 @@ to refresh-to-display-mode
         if (potential = 0) [ set pcolor 5 ]
       ]
     ]
-    set display_modeLabelLimit 0.7
+    set display-modeLabelLimit 0.7
   ]
-  if (display_mode = "land use intensity")
+  if (display-mode = "land use intensity")
   [
     if (any? patches with [myGroup != nobody])
     [
@@ -824,9 +834,9 @@ to refresh-to-display-mode
       ]
     ]
     if (any? patches with [myGroup = nobody]) [ ask patches with [myGroup = nobody] [ set pcolor brown ] ]
-    set display_modeLabelLimit 0.7
+    set display-modeLabelLimit 0.7
   ]
-  if (display_mode = "group intensity")
+  if (display-mode = "group intensity")
   [
     if (any? patches with [myGroup != nobody])
     [
@@ -839,9 +849,9 @@ to refresh-to-display-mode
       ]
     ]
     if (any? patches with [myGroup = nobody]) [ ask patches with [myGroup = nobody] [ set pcolor brown ] ]
-    set display_modeLabelLimit 0.74
+    set display-modeLabelLimit 0.74
   ]
-  if (display_mode = "group effectiveness")
+  if (display-mode = "group effectiveness")
   [
     if (any? patches with [myGroup != nobody])
     [
@@ -854,9 +864,9 @@ to refresh-to-display-mode
       ]
     ]
     if (any? patches with [myGroup = nobody]) [ ask patches with [myGroup = nobody] [ set pcolor brown ] ]
-    set display_modeLabelLimit 0.68
+    set display-modeLabelLimit 0.68
   ]
-  if (display_mode = "distance penalization")
+  if (display-mode = "distance penalization")
   [
     if (any? patches with [myGroup != nobody])
     [
@@ -869,9 +879,9 @@ to refresh-to-display-mode
       ]
     ]
     if (any? patches with [myGroup = nobody]) [ ask patches with [myGroup = nobody] [ set pcolor brown ] ]
-    set display_modeLabelLimit 0.68
+    set display-modeLabelLimit 0.68
   ]
-  if (display_mode = "group strength (effec*intens*distPen)") [
+  if (display-mode = "group strength (effec*intens*distPen)") [
     if (any? patches with [myGroup != nobody])
     [
       let maxStrength max [( [groupIntensity * groupEffectiveness] of myGroup ) * ( e ^ ( - (distance myGroup) / (disPenGr * maxDist) ) )] of patches with [myGroup != nobody]
@@ -883,16 +893,16 @@ to refresh-to-display-mode
       ]
     ]
     if (any? patches with [myGroup = nobody]) [ ask patches with [myGroup = nobody] [ set pcolor brown ] ]
-    set display_modeLabelLimit 0.44
+    set display-modeLabelLimit 0.44
   ]
-  if (display_mode = "group territory")
+  if (display-mode = "group territory")
   [
     if (any? groups)
     [
       ask patches with [myGroup != nobody] [ set pcolor [flag] of myGroup ]
     ]
     if (any? patches with [myGroup = nobody]) [ ask patches with [myGroup = nobody] [ set pcolor brown ] ]
-    set display_modeLabelLimit 0.76
+    set display-modeLabelLimit 0.76
   ]
 
 end
@@ -973,14 +983,14 @@ to refresh-display-labels
   ;;; show/hide extra display labels
   ifelse (display-labels = true)
   [
-    ask patches with [ (pycor > (min-pycor + round ((max-pycor - min-pycor) * 0.95)) - 1) and (pxcor > min-pxcor + round ((max-pxcor - min-pxcor) * display_modeLabelLimit)) ]
+    ask patches with [ (pycor > (min-pycor + round ((max-pycor - min-pycor) * 0.95)) - 1) and (pxcor > min-pxcor + round ((max-pxcor - min-pxcor) * display-modeLabelLimit)) ]
     [
       set pcolor black
       if (any? groups-here = true) [ ask groups-here [ set hidden? true ] ]
       if (any? pointers-here with [ group-helper = true ])
       [ ask pointers-here with [ group-helper = true ] [ set hidden? true ] ]
     ]
-    ask labelpositions with [ name = "display mode" ] [ set label display_mode ]
+    ask labelpositions with [ name = "display mode" ] [ set label display-mode ]
     let bigGroupSizeLabel ""
     if (bigGroupSize != "")
     [ set bigGroupSizeLabel (precision (100 * bigGroupSize / totalUsefulPatches) 2) ]
@@ -1045,7 +1055,7 @@ to load-experiment
   ;;; Note that the setup will use the value set by the user for any parameter not included here.
 
   let FilePath "exp//"
-  let filename (word FilePath "exp_" expNumber ".csv")
+  let filename (word FilePath "exp_" experiment-number ".csv")
   file-open filename
   while [not file-at-end?]
   [
@@ -1070,7 +1080,7 @@ to load-experiment
     set effectivenessGr file-read
     set maxGroupChangeRate file-read
 
-    set endSimulation file-read
+    set end-simulation-in-tick file-read
   ]
   file-close
 
@@ -1084,7 +1094,7 @@ to generate-animation
 
   setup
   vid:start-recorder
-  repeat endSimulation [ go vid:record-view ]
+  repeat end-simulation-in-tick [ go vid:record-view ]
   vid:save-recording  (word "run_" behaviorspace-run-number ".mov")
   vid:reset-recorder
 
@@ -1193,8 +1203,8 @@ SLIDER
 621
 231
 654
-intrinsic_growth_rate
-intrinsic_growth_rate
+intrinsic-growth-rate
+intrinsic-growth-rate
 0
 0.1
 0.01
@@ -1246,8 +1256,8 @@ SLIDER
 654
 231
 687
-extrinsic_growth_rate
-extrinsic_growth_rate
+extrinsic-growth-rate
+extrinsic-growth-rate
 0
 0.1
 0.001
@@ -1297,7 +1307,7 @@ INPUTBOX
 385
 125
 445
-initial_number_groups
+initial-number-groups
 5.0
 1
 0
@@ -1374,8 +1384,8 @@ INPUTBOX
 325
 82
 385
-init_%landUse
-10.0
+init-%landUse
+20.0
 1
 0
 Number
@@ -1383,11 +1393,11 @@ Number
 SLIDER
 368
 666
-606
+642
 699
-distance_penalty_gradient
-distance_penalty_gradient
-0.01
+distance-penalty-gradient
+distance-penalty-gradient
+0
 100
 10.0
 0.01
@@ -1398,10 +1408,10 @@ HORIZONTAL
 SLIDER
 8
 452
-226
+248
 485
-max_%distance_initial_groups_core
-max_%distance_initial_groups_core
+max-%distance-initial-groups-core
+max-%distance-initial-groups-core
 0
 100
 50.0
@@ -1415,9 +1425,9 @@ SLIDER
 521
 281
 554
-max_%distance_between_initial_groups
-max_%distance_between_initial_groups
-20
+max-%distance-between-initial-groups
+max-%distance-between-initial-groups
+0
 100
 50.0
 1
@@ -1430,8 +1440,8 @@ CHOOSER
 178
 225
 223
-display_mode
-display_mode
+display-mode
+display-mode
 "land use potential" "land use intensity" "group territory" "group intensity" "group effectiveness" "distance penalization" "group strength (effec*intens*distPen)"
 0
 
@@ -1453,10 +1463,10 @@ NIL
 0
 
 MONITOR
-604
-665
-661
-702
+643
+664
+700
+701
 NIL
 disPenGr
 2
@@ -1510,10 +1520,10 @@ maxDistInitGroupsToNearestCore
 SLIDER
 345
 718
-540
+562
 751
-max_group_change_rate
-max_group_change_rate
+max-group-change-rate
+max-group-change-rate
 0
 100
 10.0
@@ -1527,8 +1537,8 @@ INPUTBOX
 475
 383
 535
-num_cores
-3.0
+num-cores
+5.0
 1
 0
 Number
@@ -1538,14 +1548,14 @@ SLIDER
 512
 718
 545
-potential_decay_gradient
-potential_decay_gradient
+potential-decay-gradient
+potential-decay-gradient
 0
 100
 12.0
 1
 1
-NIL
+%
 HORIZONTAL
 
 INPUTBOX
@@ -1553,8 +1563,8 @@ INPUTBOX
 474
 506
 534
-max_potential
-20.0
+max-potential
+10.0
 1
 0
 Number
@@ -1564,7 +1574,7 @@ INPUTBOX
 592
 401
 652
-num_null_bodies
+num-null-bodies
 3.0
 1
 0
@@ -1603,18 +1613,18 @@ layout-scenario
 1
 
 SLIDER
-401
-605
-560
-638
-num_null_patches
-num_null_patches
+403
+590
+595
+623
+num-null-patches
+num-null-patches
 0
 100
-10.0
+9.9
 0.1
 1
-NIL
+% patches
 HORIZONTAL
 
 TEXTBOX
@@ -1650,11 +1660,11 @@ Initial conditions
 SLIDER
 10
 719
-255
+253
 752
-effectiveness_gradient
-effectiveness_gradient
-0.01
+effectiveness-gradient
+effectiveness-gradient
+0
 100
 20.0
 0.01
@@ -1663,10 +1673,10 @@ effectiveness_gradient
 HORIZONTAL
 
 MONITOR
-256
-716
-336
-753
+250
+717
+330
+754
 NIL
 effectivenessGr
 0
@@ -1674,9 +1684,9 @@ effectivenessGr
 9
 
 MONITOR
-540
+562
 717
-648
+670
 754
 NIL
 maxGroupChangeRate
@@ -1718,10 +1728,10 @@ potentialGr
 9
 
 MONITOR
-563
-604
-646
-641
+404
+622
+487
+659
 NIL
 numNullBodies
 0
@@ -1729,10 +1739,10 @@ numNullBodies
 9
 
 MONITOR
-646
-604
-735
-641
+487
+622
+576
+659
 NIL
 numNullPatches
 0
@@ -1927,8 +1937,8 @@ CHOOSER
 39
 149
 84
-typeOfExperiment
-typeOfExperiment
+type-of-experiment
+type-of-experiment
 "random" "user-defined" "defined by expNumber"
 1
 
@@ -1978,20 +1988,20 @@ display-labels
 INPUTBOX
 7
 84
-88
+123
 144
-endSimulation
+end-simulation-in-tick
 1000.0
 1
 0
 Number
 
 INPUTBOX
-88
+128
 84
-154
+232
 144
-expNumber
+experiment-number
 0.0
 1
 0
@@ -2018,12 +2028,12 @@ Display settings
 1
 
 INPUTBOX
-154
-84
-216
-144
+167
+21
+229
+81
 seed
-324.0
+0.0
 1
 0
 Number

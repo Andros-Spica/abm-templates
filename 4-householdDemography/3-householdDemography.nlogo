@@ -105,8 +105,6 @@ to setup
 
   update-counters
 
-  refresh-view
-
   reset-ticks
 
 end
@@ -126,12 +124,12 @@ to set-parameters
   set householdInitialAgeDistribution read-from-string ( word "[" household-initial-age-distribution "]")
   set maxCoupleCountDistribution read-from-string ( word "[" max-couple-count-distribution "]")
 
-  if (experiment-type = "user-defined")
+  if (type-of-experiment = "user-defined")
   [
     ;;; load parameters from user interface
     set initialNumHouseholds initial-num-households
   ]
-  if (experiment-type = "random")
+  if (type-of-experiment = "random")
   [
     ;;; use values from user interface as a maximum for random uniform distributions
     set initialNumHouseholds 1 + random initial-num-households ; at least one household
@@ -162,21 +160,27 @@ to parameters-check1
 
   ;;; check if values were reset to 0
   ;;; and set default values
-  if (average-births-per-woman = 0)             [ set average-births-per-woman              8 ]
+  if (initial-num-households = 0)               [ set initial-num-households               25 ]
+
   if (cdmlt-level = 0)                          [ set cdmlt-level                           8 ]
+  if (c1-fert = 0)                              [ set c1-fert                               0.9 ]
   if (c1-women = 0)                             [ set c1-women                              0.9 ]
   if (c1-men = 0)                               [ set c1-men                                0.85 ]
+  if (mu-fert = 0)                              [ set mu-fert                              15 ]
   if (mu-women = 0)                             [ set mu-women                             15 ]
   if (mu-men = 0)                               [ set mu-men                               20 ]
+  if (sigma1-fert = 0)                          [ set sigma1-fert                           5 ]
   if (sigma1-women = 0)                         [ set sigma1-women                          5 ]
   if (sigma1-men = 0)                           [ set sigma1-men                            2 ]
+  if (sigma2-fert = 0)                          [ set sigma2-fert                           2 ]
   if (sigma2-women = 0)                         [ set sigma2-women                          2 ]
   if (sigma2-men = 0)                           [ set sigma2-men                           10 ]
 
   ;;; string type inputs (vector of values)
-  if (initial-num-households = 0)               [ set initial-num-households               25 ]
-  if (household-initial-age-distribution = "0")   [ set household-initial-age-distribution   "0 30" ]
-  if (max-couple-count-distribution = "0")        [ set max-couple-count-distribution        "1 6" ]
+  if (household-initial-age-distribution = 0 or
+    length household-initial-age-distribution = 1)   [ set household-initial-age-distribution   "0 30" ]
+  if (max-couple-count-distribution = 0 or
+    length max-couple-count-distribution = 1)        [ set max-couple-count-distribution        "1 6" ]
 
 end
 
@@ -987,12 +991,6 @@ end
 ;;; DISPLAY ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-to refresh-view
-
-
-
-end
-
 to plot-table [ values ]
 
   let j 0
@@ -1002,6 +1000,7 @@ to plot-table [ values ]
     plotxy j i
     set j j + 1
   ]
+  plot-pen-up
 
 end
 
@@ -1030,76 +1029,71 @@ end
 
 to build-fertility-tables
 
-  set fertilityTable load-betaDist-table
+  set fertilityTable load-peristeri-kostaki-model-table c1-fert mu-fert sigma1-fert sigma2-fert
 
 end
 
-to-report load-betaDist-table
-
-  ;;; this function calculate the age-specific fertility rate 'ASFR' (probabilities for a woman to give birth between at age i)
-  ;;; using a beta distribution scaled to the average number of offspring per woman during the entire fertile period
-  ;;; Beta distribution is either obtained with the external R script or by using the 'rngs' community extension.
-  ;;; NOTE: 2.1 of offspring alive during fertile period is the minimum replacement rate (i.e. fertility must compensate infant mortality)
-  ;;; Approach taken from Peter Ellis
-  ;;; http://freerangestats.info/blog/2018/06/26/fertility-rate
-  ;;; https://github.com/ellisp/blog-source/tree/master/_working/0122-demographics
-
-  let birthProbs (list)
-
-  let FilePath "demoTables//"
-  let filename (word FilePath "betaDist.txt")
-  let temp 0
-  file-open filename
-  set temp file-read ; skips column name
-
-  while [not file-at-end?]
-  [
-    set temp file-read ; this line skips the row identifier
-    set birthProbs lput file-read birthProbs ; load row datum
-  ]
-  file-close
-
-  set birthProbs map [ i -> i * average-births-per-woman / (length filter [j -> j > 0] birthProbs) ] birthProbs
-
-  report birthProbs
-
-end
+;to-report load-betaDist-table
+;
+;  ;;; this function calculate the age-specific fertility rate 'ASFR' (probabilities for a woman to give birth between at age i)
+;  ;;; using a beta distribution scaled to the average number of offspring per woman during the entire fertile period
+;  ;;; Beta distribution is either obtained with the external R script or by using the 'rngs' community extension.
+;  ;;; NOTE: 2.1 of offspring alive during fertile period is the minimum replacement rate (i.e. fertility must compensate infant mortality)
+;  ;;; Approach taken from Peter Ellis
+;  ;;; http://freerangestats.info/blog/2018/06/26/fertility-rate
+;  ;;; https://github.com/ellisp/blog-source/tree/master/_working/0122-demographics
+;
+;  let birthProbs (list)
+;
+;  let FilePath "demoTables//"
+;  let filename (word FilePath "betaDist.txt")
+;  let temp 0
+;  file-open filename
+;  set temp file-read ; skips column name
+;
+;  while [not file-at-end?]
+;  [
+;    set temp file-read ; this line skips the row identifier
+;    set birthProbs lput file-read birthProbs ; load row datum
+;  ]
+;  file-close
+;
+;  set birthProbs map [ i -> i * average-births-per-woman / (length filter [j -> j > 0] birthProbs) ] birthProbs
+;
+;  report birthProbs
+;
+;end
 
 to build-nuptiality-tables
 
-  set nuptialityTable-women load-nuptiality-model-table true
+  set nuptialityTable-women load-peristeri-kostaki-model-table c1-women mu-women sigma1-women sigma2-women
 
-  set nuptialityTable-men load-nuptiality-model-table false
+  set nuptialityTable-men load-peristeri-kostaki-model-table c1-men mu-men sigma1-men sigma2-men
 
 end
 
-to-report load-nuptiality-model-table [ isFemale ]
+to-report load-peristeri-kostaki-model-table [ c1 mu sigma1 sigma2 ]
 
-  ;;; The following correspond to the first parametric model
-  ;;; for fitting the age-specific distributions of marriages, mentioned in page 133 of:
-  ;;; Peristeva and Kostaki (2015)
+  ;;; The following correspond to the first parametric model in:
+
+  ;;; Peristeva and Kostaki, 2009, p. 147
+  ;;; "Modeling fertility in modern populations"
+  ;;; Demographic Research 16: 141-194
+  ;;; Available from: https://dx.doi.org/10.4054/DemRes.2007.16.6
+
+  ;;; Peristeva and Kostaki (2015), p. 133
   ;;; "A parametric model for estimating nuptiality patterns in modern populations"
   ;;; Canadian studies in population 42(2):130-148. DOI: 10.25336/P6TK56
   ;;; Available from: https://www.researchgate.net/publication/285457704_A_parametric_model_for_estimating_nuptiality_patterns_in_modern_populations [accessed Nov 27 2018].
   ;;; use "demoTables/compareNuptialityModel.R" to test shapes
-
-  let c1 c1-women
-  let sigma-list (list sigma1-women sigma2-women)
-  let mu mu-women
-  if (not isFemale)
-  [
-    set c1 c1-men
-    set sigma-list (list sigma1-men sigma2-men)
-    set mu mu-men
-  ]
 
   let marriageProbs (list)
 
   foreach n-values 151 [ i -> i ]
   [
     i ->
-    let sigma item 1 sigma-list
-    if (i < mu) [ set sigma item 0 sigma-list ]
+    let sigma sigma1
+    if (i > mu) [ set sigma sigma2 ]
 
     set marriageProbs lput (
       c1 * exp (-1 * (((i - mu) / sigma) ^ 2))
@@ -1239,7 +1233,7 @@ INPUTBOX
 143
 116
 SEED
-2.0
+0.0
 1
 0
 Number
@@ -1249,8 +1243,8 @@ CHOOSER
 122
 176
 167
-experiment-type
-experiment-type
+type-of-experiment
+type-of-experiment
 "user-defined" "random"
 0
 
@@ -1260,7 +1254,7 @@ INPUTBOX
 144
 318
 initial-num-households
-50.0
+25.0
 1
 0
 Number
@@ -1293,7 +1287,7 @@ INPUTBOX
 166
 545
 max-couple-count-distribution
-1 5
+1 6
 1
 0
 String
@@ -1475,35 +1469,35 @@ NIL
 1
 
 SLIDER
-408
-491
-611
-524
+409
+365
+612
+398
 cdmlt-level
 cdmlt-level
 1
 25
-9.0
+8.0
 1
 1
 levels from 1 to 25
 HORIZONTAL
 
 CHOOSER
-407
-524
-548
-569
+408
+398
+549
+443
 coale-demeny-region
 coale-demeny-region
 "west" "east" "south" "north"
 1
 
 PLOT
-181
-474
-387
-614
+182
+330
+388
+470
 mortality (prob. dying)
 NIL
 NIL
@@ -1538,10 +1532,10 @@ PENS
 "pen-1" 1.0 0 -14070903 true "" "plot-table nuptialityTable-men"
 
 PLOT
-180
-333
-387
-476
+182
+470
+389
+613
 fertility (prob. of giving birth)
 NIL
 NIL
@@ -1554,21 +1548,6 @@ false
 "" "clear-plot \nset-plot-y-range -0.001 (precision (max fertilityTable + 0.001) 0.01)"
 PENS
 "default" 1.0 0 -5298144 true "" "plot-table fertilityTable"
-
-SLIDER
-386
-405
-629
-438
-average-births-per-woman
-average-births-per-woman
-0
-30
-8.5
-0.001
-1
-default: 8
-HORIZONTAL
 
 PLOT
 1064
@@ -1632,55 +1611,55 @@ totalPopulationGrowth
 14
 
 SLIDER
-392
-699
-577
-732
+393
+702
+578
+735
 c1-women
 c1-women
 0
 1
-0.85
+0.9
 0.001
 1
 (default: 0.85)
 HORIZONTAL
 
 SLIDER
-759
-697
-945
-730
+760
+700
+946
+733
 sigma1-women
 sigma1-women
 0
 2 * 5
-10.0
+5.0
 0.001
 1
 (default: 5)
 HORIZONTAL
 
 SLIDER
-577
-699
-758
-732
+578
+702
+759
+735
 mu-women
 mu-women
 0
 40
-20.225
+15.0
 0.001
 1
 (default: 20)
 HORIZONTAL
 
 SLIDER
-393
-733
-577
-766
+394
+736
+578
+769
 c1-men
 c1-men
 0
@@ -1692,10 +1671,10 @@ c1-men
 HORIZONTAL
 
 SLIDER
-577
-732
-759
-765
+578
+735
+760
+768
 mu-men
 mu-men
 0
@@ -1707,25 +1686,85 @@ mu-men
 HORIZONTAL
 
 SLIDER
-759
-732
-944
-765
+760
+735
+945
+768
 sigma1-men
 sigma1-men
 0
 2 * 5
-5.0
+2.0
 0.001
 1
 (default: 5)
 HORIZONTAL
 
+SLIDER
+392
+471
+577
+504
+c1-fert
+c1-fert
+0
+1
+0.9
+0.001
+1
+(default: 0.85)
+HORIZONTAL
+
+SLIDER
+392
+539
+578
+572
+sigma1-fert
+sigma1-fert
+0
+2 * 5
+5.029
+0.001
+1
+(default: 5)
+HORIZONTAL
+
+SLIDER
+394
+574
+580
+607
+sigma2-fert
+sigma2-fert
+0
+2 * 5
+10.0
+0.001
+1
+(default: 5)
+HORIZONTAL
+
+SLIDER
+392
+505
+573
+538
+mu-fert
+mu-fert
+0
+40
+25.783
+0.001
+1
+(default: 20)
+HORIZONTAL
+
 BUTTON
-442
-342
-551
-375
+37
+634
+146
+667
 refresh tables
 build-demography-tables\nupdate-plots
 NIL
@@ -1836,25 +1875,25 @@ totalOrphans
 11
 
 SLIDER
-946
-696
-1135
-729
+947
+699
+1136
+732
 sigma2-women
 sigma2-women
 0
 2 * 5
-5.0
+2.0
 0.001
 1
 (default: 5)
 HORIZONTAL
 
 SLIDER
-947
-731
-1135
-764
+948
+734
+1136
+767
 sigma2-men
 sigma2-men
 0
@@ -1866,6 +1905,9 @@ sigma2-men
 HORIZONTAL
 
 @#$#@#$#@
+## TO DO
+- add parametric tabu restrictions to the formation of couples. Now, it is possible to have any given single individual marrying any other single, even siblings and, less likely, mother-son/father-daughter
+
 ## WHAT IS IT?
 
 (a general understanding of what the model is trying to show or explain)

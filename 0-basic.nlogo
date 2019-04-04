@@ -39,7 +39,8 @@ globals
 
   ;;; modified parameters
   modDiscParameter
-  modContParameter
+  modContParameter1
+  modContParameter2
 
   ;;; variables
   ;;;; auxiliar
@@ -100,24 +101,26 @@ end
 to set-parameters
 
   ; set random seed
-  random-seed SEED
-
-  ;;; setup parameters depending on the type of experiment
-  if (experiment-type = "user-defined")
-  [
-    ;;; load parameters from user interface
-    set modDiscParameter discrete-parameter
-    set modContParameter continuous-parameter
-  ]
-  if (experiment-type = "random")
-  [
-    ;;; use values from user interface as a maximum for random uniform distributions
-    set modDiscParameter 1 + random modDiscParameter ; at least one grower
-    set modContParameter 1E-6 + random-float modContParameter ; at least very small a minimun grow rate
-  ]
+  random-seed seed
 
   ; check parameters values
   parameters-check
+
+  ;;; setup parameters depending on the type of experiment
+  if (type-of-experiment = "user-defined")
+  [
+    ;;; load parameters from user interface
+    set modDiscParameter discrete-parameter
+    set modContParameter1 continuous-parameter-1
+    set modContParameter2 continuous-parameter-2
+  ]
+  if (type-of-experiment = "random")
+  [
+    ;;; use values from user interface as a maximum for random uniform distributions
+    set modDiscParameter 1 + random discrete-parameter ; at least one grower
+    set modContParameter1 1E-6 + random-float continuous-parameter-1 ; at least very small a minimun grow rate
+    set modContParameter2 1E-6 + random-float continuous-parameter-2
+  ]
 
 end
 
@@ -125,12 +128,14 @@ to parameters-check
 
   ;;; check if values were reset to 0 (NetLogo does that from time to time...!)
   ;;; and set default values (assuming they are not 0)
-  if (modDiscParameter = 0)    [ set modDiscParameter     20 ]
-  if (modContParameter = 0)    [ set modContParameter   1E-5 ]
+  if (discrete-parameter = 0)    [ set discrete-parameter     20 ]
+  if (continuous-parameter-1 = 0)    [ set continuous-parameter-1   1E-5 ]
+  if (continuous-parameter-2 = 0)    [ set continuous-parameter-2   1E-5 ]
 
   ;;; initial parameter check (e.g., avoiding division per zero error)
-  check-par-is-positive "modDiscParameter" modDiscParameter
-  check-par-is-positive "modContParameter" modContParameter
+  check-par-is-positive "discrete-parameter" discrete-parameter
+  check-par-is-positive "continuous-parameter-1" continuous-parameter-1
+  check-par-is-positive "continuous-parameter-2" continuous-parameter-2
 
 end
 
@@ -213,10 +218,10 @@ to patch-procedure
 
   ifelse (any? agentsA-here)
   [
-    set patchVariable max (list 1 (patchVariable + modContParameter * sum [agentVariable] of agentsA-here))
+    set patchVariable patchVariable + modContParameter1 * sum [agentVariable] of agentsA-here
   ]
   [
-    set patchVariable min (list 1E-6 (patchVariable - modContParameter * sum [agentVariable] of agentsA-here))
+    set patchVariable max (list 1E-6 (patchVariable - modContParameter2 * patchVariable))
   ]
 
 end
@@ -247,18 +252,20 @@ end
 
 to refresh-view
 
+  let maxPatchVariable max [patchVariable] of patches
+
   ask patches
   [
-    set pcolor 62 + 6 * patchVariable
+    set pcolor 62 + 6 * (patchVariable / maxPatchVariable)
   ]
 
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-193
-10
-505
-323
+293
+22
+605
+335
 -1
 -1
 16.0
@@ -282,9 +289,9 @@ ticks
 30.0
 
 BUTTON
-16
+37
 26
-71
+92
 59
 NIL
 setup
@@ -299,9 +306,9 @@ NIL
 1
 
 BUTTON
-129
+150
 26
-184
+205
 59
 NIL
 go
@@ -316,50 +323,50 @@ NIL
 1
 
 INPUTBOX
-12
+72
 68
-112
+172
 128
-SEED
+seed
 2.0
 1
 0
 Number
 
 CHOOSER
-13
-136
-151
-181
-experiment-type
-experiment-type
+58
+134
+196
+179
+type-of-experiment
+type-of-experiment
 "user-defined" "random"
 0
 
 INPUTBOX
-12
-189
-87
-249
+75
+191
+177
+251
 discrete-parameter
-20.0
+10.0
 1
 0
 Number
 
 SLIDER
-10
-259
-179
-292
-continuous-parameter
-continuous-parameter
+9
+306
+269
+339
+continuous-parameter-1
+continuous-parameter-1
 0
-0.02
-1.0E-5
-0.00001
 1
-NIL
+0.1
+0.001
+1
+(default: 0.1)
 HORIZONTAL
 
 PLOT
@@ -376,15 +383,15 @@ NIL
 10.0
 true
 false
-"set-histogram-num-bars 20\nset-plot-x-range -0.01 1.01" "set-histogram-num-bars 20\nset-plot-x-range -0.01 1.01"
+"set-histogram-num-bars 20\nset-plot-x-range -0.01 (0.01 + max [patchVariable] of patches)" "set-histogram-num-bars 20\nset-plot-x-range -0.01 (0.01 + max [patchVariable] of patches)"
 PENS
 "default" 1.0 1 -16777216 true "" "histogram [patchVariable] of patches"
 
 MONITOR
-193
-349
-275
-394
+503
+350
+585
+395
 NIL
 totalPatches
 0
@@ -392,10 +399,10 @@ totalPatches
 11
 
 MONITOR
-92
-202
-193
-247
+76
+251
+177
+296
 NIL
 modDiscParameter
 0
@@ -403,20 +410,20 @@ modDiscParameter
 11
 
 MONITOR
-51
-297
-155
+77
 342
+187
+387
 NIL
-modContParameter
+modContParameter1
 5
 1
 11
 
 BUTTON
-73
+94
 26
-128
+149
 59
 NIL
 go
@@ -429,6 +436,32 @@ NIL
 NIL
 NIL
 1
+
+SLIDER
+9
+393
+271
+426
+continuous-parameter-2
+continuous-parameter-2
+0
+1
+0.005
+0.001
+1
+(default: 0.05)
+HORIZONTAL
+
+MONITOR
+77
+426
+188
+471
+NIL
+modContParameter2
+3
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
