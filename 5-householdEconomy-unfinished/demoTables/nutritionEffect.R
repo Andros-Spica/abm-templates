@@ -42,13 +42,13 @@ netMortCurve <- function(consumed, numPeople, mort, dimReturns = 0.1)
 
 # plot nutrition function
 png("nutrition.png", width = 800, height = 480)
-plot(c(0,30), c(-1,1), type = "n",
-     main = "Nutrition function\n(c = consumed, n = number of people)",
+plot(c(0,5000), c(-1,1), type = "n",
+     main = "Nutrition function\n(example: consumed = 0 to 5000, required = 3750)",
      xlab = "consumed", ylab = "output")
-lines(0:30, getNutrition(0:30, 15), col = "black")
-text(5, 0.5,
+lines(0:5000, getNutrition(0:5000, 2500), col = "black")
+text(10, 0.5,
      expression(
-       "nutrition" == frac((c - n), n)^3
+       "nutrition" == bgroup("(", frac("consumed" - "required", "required"), ")")^3
      )
      , cex = 1.2)
 dev.off()
@@ -89,7 +89,7 @@ lines(1:151,
 text(30, 0.8,
      expression(
        "nutEffect" == bgroup("{", atop(" nutrition " %*% q(x) %*% "dimReturns, if nutrition" > 0 * " ", 
-                                       " nutrition " %*% q(x) * ", else "), "}") 
+                                       " nutrition " %*% (1 - q(x)) * ", else "), "}") 
      )
      , cex = 0.5)
 
