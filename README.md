@@ -10,9 +10,13 @@ This collection is intended as a open resource for anyone creating (or willing t
 
 A general template for structuring NetLogo models (exemplifies general practices such as GNU license, UI setting, commentary, procedures for parameter checks, structuring procedures using commentary, etc.)
 
+![0-basic interface](images/0-basic%20interface.png)
+
 ## Growers ("1-growers.nlogo")
 
 Template illustrating the implementation of a density-dependent population growth.
+
+![1-growers interface](images/1-growers%20interface.png)
 
 ## Terrain Builder ("2-terrainBuilder.nlogo")
 
@@ -20,7 +24,9 @@ Template including a submodel to generate local-scale inland terrain. "Terrain" 
 
 This template contain examples of data exporting and using helper agents (i.e. agents used temporally to create patterns).
 
-## Land Use ("2-2-landUse.nlogo")
+![2-terrainBuilder interface](images/2-terrainBuilder%20interface.png)
+
+## Land Use ("3-landUse.nlogo")
 
 Template seting up a framework for land use competition amoung territorial agropastoral groups. The Terrain Builder submodel is included to generate different spatial settings. Each turn, groups need to allocate an amount of intensity units, which increases slowly every turn.
 
@@ -34,7 +40,9 @@ Group efficiency is represented as dependent on group size (total number of inte
 
 This template introduces how to create multiple modes of visualisation or display, import parameter settings from files and generate video animations of a simulation.
 
-## Household Demography ("3-householdDemography.nlogo")
+![3-landUse interface](images/3-landUse%20interface.png)
+
+## Household Demography ("4-householdDemography.nlogo")
 
 This template sets a general demographic model representing individual births (fertility submodel), deaths (mortality submodel), and match-making (nuptiality submodel). Individuals are represented not as separate agents, but as values in lists (e.g. age, sex) placed inside household agents.
 
@@ -50,4 +58,6 @@ The template includes a folder ("demoTables") containing files associated to the
   -  "exportCoaleDemenyLifeTables.R": creates sex-specific life tables according to the Coale-Demeny model using the 'demogR' package. It then exports these tables to separate name-coded files (e.g., "cdmlteM.txt").
 
 - txt files: tables 
+
+![4-householdDemography interface](images/4-householdDemography%20interface.png)
 
