@@ -1573,7 +1573,7 @@ PLOT
 388
 470
 mortality (prob. dying)
-NIL
+age
 NIL
 0.0
 10.0
@@ -1592,7 +1592,7 @@ PLOT
 388
 770
 nuptiality (prob. marrying)
-NIL
+age
 NIL
 0.0
 10.0
@@ -1611,7 +1611,7 @@ PLOT
 389
 613
 fertility (prob. of giving birth)
-NIL
+age
 NIL
 0.0
 10.0
@@ -1649,7 +1649,7 @@ CHOOSER
 residence-rule
 residence-rule
 "patrilocal-patrilineal" "matrilocal-matrilineal"
-1
+0
 
 MONITOR
 1103
@@ -1738,7 +1738,7 @@ c1-men
 c1-men
 0
 1
-0.85
+1.0
 0.001
 1
 (default: 0.85)
@@ -1966,7 +1966,7 @@ HORIZONTAL
 SLIDER
 948
 734
-1156
+1136
 767
 sigma2-men
 sigma2-men
@@ -1987,7 +1987,7 @@ acceptable-kinship-degree-for-couples
 acceptable-kinship-degree-for-couples
 0
 10
-0.0
+3.0
 1
 1
 NIL
