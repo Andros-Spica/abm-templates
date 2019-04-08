@@ -43,6 +43,7 @@ globals
   initialNumHouseholds
   householdInitialAgeDistribution ; (list minimum maximum)
   maxCoupleCountDistribution      ; (list minimum maximum)
+  acceptableKinshipDegreeForCouples ; degree of kinship acceptable between two individuals forming a new couple (1 = same household, 0.5 = level one relationship, etc.)
 
   ;;; variables
   ;;;; auxiliar
@@ -77,11 +78,12 @@ globals
 
 households-own
 [
-  hh_householdAge ; number of years during which the household existed (integer)
-  hh_maxCoupleCount ; max. number of couples accepted within a household (integer)
-  hh_membersAge ; ages of every household member (list of integer)
-  hh_membersSex ; sex of every household member (list of true/false, i.e. is female?)
-  hh_membersMarriage ; couple index of every member (list of integers; 0-Inf: couple index, -1: member is single)
+  hh_lineage                     ; identifier of the lineage history of a household (list of integers; integers are household 'who's)
+  hh_householdAge                ; number of years during which the household existed (integer)
+  hh_maxCoupleCount              ; max. number of couples accepted within a household (integer)
+  hh_membersAge                  ; ages of every household member (list of integer)
+  hh_membersSex                  ; sex of every household member (list of true/false, i.e. is female?)
+  hh_membersMarriage             ; couple index of every member (list of integers; 0-Inf: couple index, -1: member is single)
 
   ;;; auxiliar
   hh_memberDataToDelete
@@ -128,11 +130,13 @@ to set-parameters
   [
     ;;; load parameters from user interface
     set initialNumHouseholds initial-num-households
+    set acceptableKinshipDegreeForCouples acceptable-kinship-degree-for-couples
   ]
   if (type-of-experiment = "random")
   [
     ;;; use values from user interface as a maximum for random uniform distributions
     set initialNumHouseholds 1 + random initial-num-households ; at least one household
+    set acceptableKinshipDegreeForCouples random 10
     set householdInitialAgeDistribution (list
       (1 + random (item 0 householdInitialAgeDistribution))   ; minimum
       (
@@ -291,49 +295,63 @@ to apply-nuptiality
   set womenToMarry (list)
   set menToMarry (list)
 
-  ; fill lists
+  ; fill lists (random order)
   ask households
   [
+    ; add to the womenToMarry/menToMarry any women/men that should be marrying, accordint to the nuptiality model
     hh_set-members-to-marry
 
+    ; its important to reset the content of this list,
+    ; so that the next procedures account only for individuals moving out because they are forming couples
     set hh_memberDataToDelete (list)
   ]
 
-  ; identify internal and external matches
-  let internalMatchIndex 0
-  let externalMatchIndex 0
-  let womenWithoutMatch (length womenToMarry > length menToMarry)
-  ifelse (womenWithoutMatch)
+;  print (word "womenToMarry: " womenToMarry)
+;  print (word "menToMarry: " menToMarry)
+
+  ; iterate for every women and men to marry until all form couples
+  ; or are included in the womenWithoutMatch/menWithoutMatch lists
+
+  ; iterate for every women to marry
+  foreach n-values (length womenToMarry) [i -> i]
   [
-    set internalMatchIndex (n-values length menToMarry [ i -> i ])
-    set externalMatchIndex (n-values (length womenToMarry - length menToMarry) [ i -> i + length menToMarry])
-    ;print "There are extra women to marry"
-    ; EXAMPLE:
-    ; for length menToMarry = 10 and length womenToMarry = 15
-    ; internalMatchIndex = [ 0 1 2 3 4 5 6 7 8 9 ]
-    ; externalMatchIndex = [ 10 11 12 13 14 ]
-  ]
-  [
-    set internalMatchIndex (n-values length womenToMarry [ i -> i ])
-    set externalMatchIndex (n-values (length menToMarry - length womenToMarry) [ i -> i + length womenToMarry])
-    ;print "There are extra men to marry"
+    womanIndex ->
+
+    ; initialise this women as single (null husband index in menToMarry)
+    let husbandIndex -1
+
+    ; iterate for every men still to marry (this loop is skipped if there is no menToMarry)
+    foreach n-values (length menToMarry) [i -> i]
+    [
+      manIndex ->
+
+      ; try to create couple if still did not found husband
+      if (husbandIndex = -1)
+      [
+        ; create-couple returns true only if the procedure could form the couple
+        if (create-couple (item womanIndex womenToMarry) (item manIndex menToMarry))
+        [
+          set husbandIndex manIndex
+        ]
+      ]
+    ]
+
+    ifelse (husbandIndex = -1)
+    [
+      ; if no husband was found within this population, create the new couple with this woman and an external man
+      create-couple-external (item womanIndex womenToMarry)
+    ]
+    [
+      ; if husband was found within this population, remove him from menToMarry list
+      set menToMarry remove-item husbandIndex menToMarry
+    ]
   ]
 
-  ;print (word "internal" internalMatchIndex)
-  ;print (word "external" externalMatchIndex)
-
-  ; match every women to marry with a men to marry internally
-  foreach internalMatchIndex
+  ; iterate for every men still to marry, creating new couples with external women
+  foreach n-values (length menToMarry) [i -> i]
   [
-    i ->
-    create-couple i
-  ]
-
-  ; iterate for every women or men with no match internally, "searching" for an external match
-  foreach externalMatchIndex
-  [
-    i ->
-    create-couple-external i womenWithoutMatch
+    manIndex ->
+    create-couple-external (item manIndex menToMarry)
   ]
 
   ; delete recently married individuals from their parent household
@@ -353,56 +371,107 @@ to apply-fertility
 
 end
 
-to create-couple [ indexInSinglesList ]
-
-  ; load woman and man data according to index of the womenToMarry or menToMarry lists
-  let womanData item indexInSinglesList womenToMarry ; list holding the household and member index
-  let manData item indexInSinglesList menToMarry
+to-report create-couple [ womanData manData ]
 
   let womanHousehold item 0 womanData
   let womanIndex item 1 womanData
   let manHousehold item 0 manData
   let manIndex item 1 manData
 
-  ;print (word "index " womanIndex " in " [hh_membersAge] of womanHousehold ", female, " womanHousehold)
-  ;print (word "index " manIndex " in " [hh_membersAge] of manHousehold ", male, " manHousehold)
+;  print (word "index " womanIndex " in " [hh_membersAge] of womanHousehold ", female, " womanHousehold)
+;  print (word "index " manIndex " in " [hh_membersAge] of manHousehold ", male, " manHousehold)
 
-  if (residence-rule = "patrilocal-patrilineal")
+  ; first, test if new couple vulnerates any tabu
+  ifelse (couple-is-acceptable womanHousehold manHousehold)
   [
-    ask manHousehold
+    if (residence-rule = "patrilocal-patrilineal")
     [
-      hh_try-to-add-couple manIndex womanData
+      ask manHousehold
+      [
+        hh_try-to-add-couple manIndex womanData
+      ]
     ]
+    if (residence-rule = "matrilocal-matrilineal")
+    [
+      ask womanHousehold
+      [
+        hh_try-to-add-couple womanIndex manData
+      ]
+    ]
+    ;;; Other residence rules can be added here
+;    print "couple is acceptable."
+
+    report true
   ]
-  if (residence-rule = "matrilocal-matrilineal")
   [
-    ask womanHousehold
-    [
-      hh_try-to-add-couple womanIndex manData
-    ]
+;    print "couple is not acceptable."
+
+    report false
   ]
 
 end
 
-to create-couple-external [ indexInSinglesList singleSex ]
+to-report couple-is-acceptable [ womanHousehold manHousehold ]
 
-  let singleData 0  ; list holding the household and member index
+  ; two options:
+  ; 1. not at the same household,
+  ; 2. not of the same lineage
 
-  ; load single woman or man data according to index of the womenToMarry or menToMarry lists
-  ifelse (singleSex)
+  ; case 1 (simple): woman and man are in the same household
+  ;if (womanHousehold = manHousehold) [ report false ]
+
+  ; case 2 (complex, more flexible/general, includes case 1):
+  ; woman and man share the same lineage (greater risk of inbreeding)
+  if (get-kinship-degree womanHousehold manHousehold <= acceptableKinshipDegreeForCouples) [ report false ]
+
+  report true
+
+end
+
+to-report get-kinship-degree [ household1 household2 ]
+
+  ; get the lineage IDs differentiating between longer and shorter (if they have, in fact, a different length)
+  let lineage1 [hh_lineage] of household1
+  let lineage2 [hh_lineage] of household2
+
+;  print (word household1 " has lineage " lineage1)
+;  print (word household2 " has lineage " lineage2)
+
+  let numberOfCommonElements 0
+
+  ; iterate for every element in the shorter lineage ID, until finds a different element or ends the the sequence
+  foreach n-values (min (list (length lineage1) (length lineage2))) [j -> j]
   [
-    ; there are extra women to marry
-    set singleData item indexInSinglesList womenToMarry
+    i ->
+    ; if still did not found a different element (i.e. numberOfCommonElements < i)
+    ; and the elements match
+    if (numberOfCommonElements = i and (item i lineage1 = item i lineage2))
+    [
+      set numberOfCommonElements numberOfCommonElements + 1
+    ]
   ]
-  [
-    ; there are extra men to marry
-    set singleData item indexInSinglesList menToMarry
-  ]
+
+  ; get the total number of different elements in lineage IDs (i.e., number of household splits separating household1 and household2)
+  let numberOfDifferentElements sum (list (length lineage1 - numberOfCommonElements) (length lineage1 - numberOfCommonElements))
+
+  ; case examples:
+  ; between [1 2 1 5] and  [1 2 3 7],  it is 4 (diff. elements are 1 5 and 3 7)
+  ; between [15 3 1 2] and [15 4 1 2], it is 6 (diff. elements are 3 1 2 and 4 1 2)
+  ; between [6 3 8] and    [6 3],      it is 1 (diff. element is 8). Household [6 3 8] was formed with a member of the household [6 3]
+
+;  print (word "kinship degree: " numberOfDifferentElements)
+
+  report numberOfDifferentElements
+
+end
+
+to create-couple-external [ singleData ]
 
   let singleHousehold item 0 singleData
   let singleIndex item 1 singleData
+  let singleSex [item singleIndex hh_membersSex] of singleHousehold
 
-  ;print (word "Member " singleIndex " in " singleHousehold " (ages = " [hh_membersAge] of singleHousehold ", sex = " [hh_membersSex] of singleHousehold ") is marring outside the system."  )
+;  print (word "Member " singleIndex " in " singleHousehold " (ages = " [hh_membersAge] of singleHousehold ", sex = " [hh_membersSex] of singleHousehold ") is marring outside the system."  )
 
   ; find out if the new couple imply a new individual to be entering the system
   let newIndividualIn
@@ -437,7 +506,7 @@ to create-couple-external [ indexInSinglesList singleSex ]
   [
     ; the single individual is the one moving, so exiting the system...
 
-    ;print (word "individual from " singleHousehold " moving out the system: is female = " singleSex ", age = " (item singleIndex [hh_membersAge] of singleHousehold) )
+;    print (word "individual from " singleHousehold " moving out the system: is female = " singleSex ", age = " (item singleIndex [hh_membersAge] of singleHousehold) )
 
     ; add the single individual (and any children left alone) to the deletion queue of singleHousehold
     let childrenMovingOut 0
@@ -481,6 +550,7 @@ to hh_initialise
 
   ;;; Initialization of households
 
+  set hh_lineage (list who) ; initialise lineage ID with this household 'who'
   set hh_householdAge hh_get-initial-age
   set hh_maxCoupleCount hh_get-initial-max-couple-count
 
@@ -704,8 +774,12 @@ to hh_household-fission [ selfIndex spouseData ]
   ; create new household w/ self and spouse
   hatch 1
   [
+    ; expand lineage ID by adding this household 'who' to the lineage ID of the parent household
+    set hh_lineage lput who [hh_lineage] of selfHousehold
+    ; !!!
+
     set hh_householdAge 0
-    ; inherit hh_maxCoupleCount value from self's parent
+    ; inherit hh_maxCoupleCount value from parent household
 
     hh_reset-members
 
@@ -1254,7 +1328,7 @@ INPUTBOX
 144
 318
 initial-num-households
-25.0
+100.0
 1
 0
 Number
@@ -1505,11 +1579,11 @@ NIL
 10.0
 0.0
 10.0
-true
 false
-"" "clear-plot\nset-plot-y-range -0.001 (precision (max (list max mortalityTable-women max mortalityTable-men) + 0.001) 0.01)"
+false
+"" "clear-plot\nset-plot-x-range 0 100\nset-plot-y-range -0.001 (precision (max (list max mortalityTable-women max mortalityTable-men) + 0.001) 0.01)"
 PENS
-"default" 1.0 0 -5298144 true "" "plot-table mortalityTable-women"
+"default" 1.0 0 -5298144 true "\n" "plot-table mortalityTable-women"
 "pen-1" 1.0 0 -14070903 true "" "plot-table mortalityTable-men"
 
 PLOT
@@ -1524,9 +1598,9 @@ NIL
 10.0
 0.0
 10.0
-true
 false
-"" "clear-plot \nset-plot-y-range -0.001 (precision (max (list max nuptialityTable-women max nuptialityTable-men) + 0.001) 0.01)"
+false
+"" "clear-plot\nset-plot-x-range 0 55\nset-plot-y-range -0.001 (precision (max (list max nuptialityTable-women max nuptialityTable-men) + 0.001) 0.01)"
 PENS
 "default" 1.0 0 -5298144 true "" "plot-table nuptialityTable-women"
 "pen-1" 1.0 0 -14070903 true "" "plot-table nuptialityTable-men"
@@ -1543,9 +1617,9 @@ NIL
 10.0
 0.0
 10.0
-true
 false
-"" "clear-plot \nset-plot-y-range -0.001 (precision (max fertilityTable + 0.001) 0.01)"
+false
+"" "clear-plot\nset-plot-x-range 0 55\nset-plot-y-range -0.001 (precision (max fertilityTable + 0.001) 0.01)"
 PENS
 "default" 1.0 0 -5298144 true "" "plot-table fertilityTable"
 
@@ -1568,14 +1642,14 @@ PENS
 "default" 1.0 1 -16777216 true "" "histogram [hh_count-couples] of households"
 
 CHOOSER
-400
-633
-557
-678
+393
+618
+550
+663
 residence-rule
 residence-rule
 "patrilocal-patrilineal" "matrilocal-matrilineal"
-0
+1
 
 MONITOR
 1103
@@ -1611,10 +1685,10 @@ totalPopulationGrowth
 14
 
 SLIDER
-393
-702
+395
+703
 578
-735
+736
 c1-women
 c1-women
 0
@@ -1622,7 +1696,7 @@ c1-women
 0.9
 0.001
 1
-(default: 0.85)
+(default: 0.9)
 HORIZONTAL
 
 SLIDER
@@ -1652,7 +1726,7 @@ mu-women
 15.0
 0.001
 1
-(default: 20)
+(default: 15)
 HORIZONTAL
 
 SLIDER
@@ -1688,28 +1762,28 @@ HORIZONTAL
 SLIDER
 760
 735
-945
+949
 768
 sigma1-men
 sigma1-men
 0
 2 * 5
-2.0
+2.5
 0.001
 1
-(default: 5)
+(default: 2.5)
 HORIZONTAL
 
 SLIDER
 392
 471
-577
+602
 504
 c1-fert
 c1-fert
 0
 1
-0.9
+0.85
 0.001
 1
 (default: 0.85)
@@ -1718,13 +1792,13 @@ HORIZONTAL
 SLIDER
 392
 539
-578
+602
 572
 sigma1-fert
 sigma1-fert
 0
 2 * 5
-5.029
+5.0
 0.001
 1
 (default: 5)
@@ -1733,7 +1807,7 @@ HORIZONTAL
 SLIDER
 394
 574
-580
+599
 607
 sigma2-fert
 sigma2-fert
@@ -1742,29 +1816,29 @@ sigma2-fert
 10.0
 0.001
 1
-(default: 5)
+(default: 10)
 HORIZONTAL
 
 SLIDER
-392
+393
 505
-573
+601
 538
 mu-fert
 mu-fert
 0
 40
-25.783
+25.0
 0.001
 1
-(default: 20)
+(default: 25)
 HORIZONTAL
 
 BUTTON
-37
-634
-146
-667
+407
+329
+516
+362
 refresh tables
 build-demography-tables\nupdate-plots
 NIL
@@ -1883,7 +1957,7 @@ sigma2-women
 sigma2-women
 0
 2 * 5
-2.0
+5.0
 0.001
 1
 (default: 5)
@@ -1892,7 +1966,7 @@ HORIZONTAL
 SLIDER
 948
 734
-1136
+1156
 767
 sigma2-men
 sigma2-men
@@ -1901,12 +1975,32 @@ sigma2-men
 10.0
 0.001
 1
-(default: 5)
+(default: 10)
+HORIZONTAL
+
+SLIDER
+394
+666
+617
+699
+acceptable-kinship-degree-for-couples
+acceptable-kinship-degree-for-couples
+0
+10
+0.0
+1
+1
+NIL
 HORIZONTAL
 
 @#$#@#$#@
-## TO DO
-- add parametric tabu restrictions to the formation of couples. Now, it is possible to have any given single individual marrying any other single, even siblings and, less likely, mother-son/father-daughter
+## 
+Add parametric tabu restrictions to the formation of couples. Now, it is possible to have any given single individual marrying any other single, even siblings and, less likely, mother-son/father-daughter... DONE
+IMPROVEMENTS:
+- apply-nuptiality: now this procedure follows a more elegant and clear process
+ISSUES:
+- Households now track their lineage and match making is controlled by the similarity of lineage. However, this mechanisms reflects a purely lineal track of descent, meaning that relatively close blood relatives are not tracked if they do not share the lineage; e.g., a man under a matrilocal-matrilineal rule will loose track of all 'former' blood relative once they move away from their original household. Unfortunately, this solution still do not control for extreme rare cases such as marriages between siblings and other close relatives, if considering widowing. The only definitive solution is too increase complexity of the information at individual level.
+- Initialisation: the result given by the procedure 'get-kinship-degree' assumes all initial households descend from a single common parent household (returns 2). So, if the acceptable kinship level is more than 2, the formation of couples during the first generation will be restricted to those using external individuals ('create-couple-external').
 
 ## WHAT IS IT?
 
