@@ -6,25 +6,25 @@ This effort is framed by the modelling program followed as part of the [TwoRains
 
 This collection is intended as a open resource for anyone creating (or willing to create) agent-based models in NetLogo. All templates can be copied, re-used, modified and redistributed, given complainance to GNU GPL v3 license. In accordance with this same spirit, please direct to me any comments, criticism, suggestions. The repository is also open to collaborators interested into extending the template collection.
 
-## Basic ("0-basic.nlogo")
+## Basic ("00-basic.nlogo")
 
 A general template for structuring NetLogo models (exemplifies general practices such as GNU license, UI setting, commentary, procedures for parameter checks, structuring procedures using commentary, etc.)
 
-![0-basic interface](images/0-basic%20interface.png)
+![0-basic interface](screenshots/00-basic%20interface.png)
 
-## Growers ("1-growers.nlogo")
+## Growers ("01-growers.nlogo")
 
 Template illustrating the implementation of a density-dependent population growth.
 
-![1-growers interface](images/1-growers%20interface.png)
+![1-growers interface](screenshots/01-growers%20interface.png)
 
-## Terrain Builder ("2-terrainBuilder.nlogo")
+## Terrain Builder ("02-terrainBuilder.nlogo")
 
 Template including a submodel to generate local-scale inland terrain. "Terrain" is expressed as different potential return for a certain land use. This potential return is highest in "core" patches (darker green). Core patches may be distributed in point or linear patterns ("cores"). The potential is zero in "null patches" (grey), which may constitute separate "null bodies". Patches that are neither cores or part of null bodies have a potential that decreases with distance to the nearest core patch.
 
 This template contain examples of data exporting and using helper agents (i.e. agents used temporally to create patterns).
 
-![2-terrainBuilder interface](images/2-terrainBuilder%20interface.png)
+![2-terrainBuilder interface](screenshots/02-terrainBuilder%20interface.png)
 
 ## Land Use ("3-landUse.nlogo")
 
@@ -40,11 +40,13 @@ Group efficiency is represented as dependent on group size (total number of inte
 
 This template introduces how to create multiple modes of visualisation or display, import parameter settings from files and generate video animations of a simulation.
 
-![3-landUse interface](images/3-landUse%20interface.png)
+![3-landUse interface](screenshots/03-landUse%20interface.png)
 
 ## Household Demography ("4-householdDemography.nlogo")
 
 This template sets a general demographic model representing individual births (fertility submodel), deaths (mortality submodel), and match-making (nuptiality submodel). Individuals are represented not as separate agents, but as values in lists (e.g. age, sex) placed inside household agents.
+
+![4-householdDemography interface](screenshots/04-householdDemography%20interface.png)
 
 The fertility submodel is an approximation to the age-specific patterns observed in human populations (beta function curve). The mortality submodel is the Coale-Demeny Life Tables Model, available in the demoR package in R. This model was built based on a large set of 20th-century demographic data (Coale, Demeny and Vaughn, 1983). The nuptiality submodel corresponds to the first parametric model presented in Peristeva and Kostaki (2015).
 
@@ -57,7 +59,16 @@ The template includes a folder ("demoTables") containing files associated to the
   -  "exportBetaDistribution.R": creates and exports to "betaDist.txt" a vector of values corresponding to a beta distribution for ages between 0 and 150, to be used as a age-specific fertility model.
   -  "exportCoaleDemenyLifeTables.R": creates sex-specific life tables according to the Coale-Demeny model using the 'demogR' package. It then exports these tables to separate name-coded files (e.g., "cdmlteM.txt").
 
-- txt files: tables 
+- txt files: tables
 
-![4-householdDemography interface](images/4-householdDemography%20interface.png)
+Additionally, "householdDemography.Rmd" and "householdDemography.nb.html" contain a brief exploration of simulation results read from inside the "output" folder.
+
+## Weather ("05-weather.nlogo")
+
+## Terrain Builder - elevation ("06-terrainBuilder_elevation.nlogo")
+
+## Terrain Builder - waterFlow ("06-terrainBuilder_waterFlow.nlogo")
+
+## Terrain Builder - soilWaterBalance ("06-terrainBuilder_soilWaterBalance.nlogo")
+
 
