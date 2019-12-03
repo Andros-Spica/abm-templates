@@ -4,8 +4,7 @@
 
 ;;  <MODEL NAME>
 ;;  Copyright (C) <YEAR> <AUTHORS (EMAIL)>
-;;  Based on the 'Household Demography' template by Andreas Angourakis (andros.spica@gmail.com)
-;;  last update Feb 2019
+;;  Based on the 'householdDemography' template by Andreas Angourakis (andros.spica@gmail.com), 2018
 ;;  available at https://www.github.com/Andros-Spica/abm-templates
 ;;
 ;;  This program is free software: you can redistribute it and/or modify
@@ -21,6 +20,8 @@
 ;;  You should have received a copy of the GNU General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+extensions [ Rnd ]
+
 ;;;;;;;;;;;;;;;;;
 ;;;;; BREEDS ;;;;
 ;;;;;;;;;;;;;;;;;
@@ -33,44 +34,45 @@ breed [ households household ]
 
 globals
 [
-  ;;; demography tables
-  fertilityTable
-  nuptialityTable-women nuptialityTable-men
-  mortalityTable-women mortalityTable-men
+  ;;; constants
+  ;;;; Demography tables
+  fertilityMinMax                 ; (list min max) the minimum and maximum age considered in the fertility table (list of integer)
+  fertilityCohortSize             ; the size in years of age groups (cohort) in the fertility table (integer)
+  nuptialityMinMax                 ; (list min max) the minimum and maximum age considered in the nuptiality table (list of integer)
+  nuptialityCohortSize             ; the size in years of age groups (cohort) in the nuptiality table (integer)
+  mortalityMinMax                 ; (list min max) the minimum and maximum age considered in the mortality table (list of integer)
+  mortalityCohortSize             ; the size in years of age groups (cohort) in the mortality table (integer)
+  womenFertilityTable             ; (list cohort1 cohort2 ... )
+  womenNuptialityTable            ; (list cohort1 cohort2 ... )
+  womenMortalityTable             ; (list cohort1 cohort2 ... )
+  menNuptialityTable              ; (list cohort1 cohort2 ... )
+  menMortalityTable               ; (list cohort1 cohort2 ... )
 
   ;;; modified parameters
-  maturityAge                     ; defaults to 15 years old; it affects the minimum age acceptable for individuals to keep a household without older individuals
   initialNumHouseholds
-  householdInitialAgeDistribution ; (list minimum maximum)
+  householdInitialAge             ; (list minimum maximum)
   maxCoupleCountDistribution      ; (list minimum maximum)
 
   ;;; variables
   ;;;; auxiliar
-  ; these are lists of string-coded individuals
-  womenToMarry                   ; single individuals selected to marry ("<household who> <member index>")
+  womenToMarry                   ; list of string-coded individuals ("<household who> <member index>")
   menToMarry
-  orphanList                     ; orphan children left without adults ("<sex> <age>")
 
   ;;;; counters and final measures
   totalHouseholds                ; count households (integer)
   totalIndividuals               ; sum of members of households (integer)
-  totalPopulationGrowth          ; % of last totalIndividuals
+  naturalPopulationGrowth        ; % of last totalIndividuals
   totalWomen                     ; sum of female members of households (integer)
   totalMen                       ; sum of male members of households (integer)
-  femaleRatio                    ; total number of women over total number of individuals (float)
+  femaleRatio                    ; total number of women over total number of individuals
   womenAgeStructure              ; merge list of all households female members ages (list of integers)
   menAgeStructure                ; merge list of all households male members ages (list of integers)
-  womenFirstAgeGroup             ; count of women with age from 0 to 4 years old (base of typical population pyramid) (integer)
-  menFirstAgeGroup               ; count of men with age from 0 to 4 years old (base of typical population pyramid) (integer)
+  womenFirstAgeGroup             ; count of women with age from 0 to 4 years old (base of typical population pyramid)
+  menFirstAgeGroup               ; count of men with age from 0 to 4 years old (base of typical population pyramid)
   womenBirths                    ; number of births (integer)
   menBirths
   womenDeaths                    ; number of deaths (integer)
   menDeaths
-  womenIn                        ; number of individuals entering the system (generated for couple creation with external population) (integer)
-  menIn
-  womenOut                       ; number of individuals exiting the system (due to couple creation with external population) (integer)
-  menOut
-  totalOrphans                   ; number of children moving from an household where all adults are dead
 ]
 
 ;;; agents variables
@@ -97,13 +99,13 @@ to setup
 
   set-parameters
 
-  build-demography-tables
+  set-tables
 
   setup-households
 
-  reset-counters
-
   update-counters
+
+  refresh-view
 
   reset-ticks
 
@@ -114,37 +116,31 @@ to set-parameters
   ; set random seed
   random-seed SEED
 
-  ; parameter set to default value (constant)
-  set maturityAge 15
-
-  ; check parameters values
-  parameters-check1
-
   ;;; setup parameters depending on the type of experiment
-  set householdInitialAgeDistribution read-from-string ( word "[" household-initial-age-distribution "]")
+  set householdInitialAge read-from-string ( word "[" household-initial-age "]")
   set maxCoupleCountDistribution read-from-string ( word "[" max-couple-count-distribution "]")
 
-  if (type-of-experiment = "user-defined")
+  if (experiment-type = "user-defined")
   [
     ;;; load parameters from user interface
     set initialNumHouseholds initial-num-households
   ]
-  if (type-of-experiment = "random")
+  if (experiment-type = "random")
   [
     ;;; use values from user interface as a maximum for random uniform distributions
     set initialNumHouseholds 1 + random initial-num-households ; at least one household
-    set householdInitialAgeDistribution (list
-      (1 + random (item 0 householdInitialAgeDistribution))   ; minimum
+    set householdInitialAge (list
+      (1 + random (item 0 householdInitialAge))   ; minimum
       (
-        (item 0 householdInitialAgeDistribution)
+        (item 0 householdInitialAge)
         + 1
-        + random ((item 1 householdInitialAgeDistribution) - (item 0 householdInitialAgeDistribution))
+        + random ((item 1 householdInitialAge) - (item 0 householdInitialAge))
       )   ; maximum
       )
     set maxCoupleCountDistribution (list
       (1 + random (item 0 maxCoupleCountDistribution))   ; minimum
       (
-        (item 0 maxCoupleCountDistribution)
+        (item 0 householdInitialAge)
         + 1
         + random ((item 1 maxCoupleCountDistribution) - (item 0 maxCoupleCountDistribution))
       )   ; maximum
@@ -152,45 +148,17 @@ to set-parameters
   ]
 
   ; check parameters values
-  parameters-check2
+  parameters-check
 
 end
 
-to parameters-check1
-
-  ;;; check if values were reset to 0
-  ;;; and set default values
-  if (initial-num-households = 0)               [ set initial-num-households               25 ]
-
-  if (cdmlt-level = 0)                          [ set cdmlt-level                           8 ]
-  if (c1-fert = 0)                              [ set c1-fert                               0.9 ]
-  if (c1-women = 0)                             [ set c1-women                              0.9 ]
-  if (c1-men = 0)                               [ set c1-men                                0.85 ]
-  if (mu-fert = 0)                              [ set mu-fert                              15 ]
-  if (mu-women = 0)                             [ set mu-women                             15 ]
-  if (mu-men = 0)                               [ set mu-men                               20 ]
-  if (sigma1-fert = 0)                          [ set sigma1-fert                           5 ]
-  if (sigma1-women = 0)                         [ set sigma1-women                          5 ]
-  if (sigma1-men = 0)                           [ set sigma1-men                            2 ]
-  if (sigma2-fert = 0)                          [ set sigma2-fert                           2 ]
-  if (sigma2-women = 0)                         [ set sigma2-women                          2 ]
-  if (sigma2-men = 0)                           [ set sigma2-men                           10 ]
-
-  ;;; string type inputs (vector of values)
-  if (household-initial-age-distribution = 0 or
-    length household-initial-age-distribution = 1)   [ set household-initial-age-distribution   "0 30" ]
-  if (max-couple-count-distribution = 0 or
-    length max-couple-count-distribution = 1)        [ set max-couple-count-distribution        "1 6" ]
-
-end
-
-to parameters-check2
+to parameters-check
 
   ;;; initial parameter check (e.g., avoiding division per zero error)
   check-par-is-positive "initialNumHouseholds" initialNumHouseholds
 
   ;;; check if given min values are less than max values
-  check-par-is-range "householdInitialAgeDistribution" householdInitialAgeDistribution
+  check-par-is-range "householdInitialAge" householdInitialAge
   check-par-is-range "maxCoupleCountDistribution" maxCoupleCountDistribution
 
 end
@@ -210,6 +178,44 @@ to check-par-is-range [ parName parListMinMax ]
   if ( item 0 parListMinMax > item 1 parListMinMax)
   [
     print (word "ERROR: " parName " minimum (first item) must be less than or equal to maximum (second item)")
+    stop
+  ]
+
+end
+
+to set-tables
+
+  load-demography-tables
+
+  ; check tables values
+  tables-check
+
+end
+
+to tables-check
+
+  ;;; check that tables have data and it adds to a positive sum
+  check-table-loaded "womenFertilityTable" womenFertilityTable
+
+  check-table-loaded "womenNuptialityTable" womenNuptialityTable
+  check-table-loaded "menNuptialityTable" menNuptialityTable
+
+  check-table-loaded "womenMortalityTable" womenMortalityTable
+  check-table-loaded "menMortalityTable" menMortalityTable
+
+end
+
+to check-table-loaded [ tableName tableValues ]
+
+  if (tableValues = 0) ; which means that the data was not loaded at all
+  [
+    print (word "ERROR: " tableName " was not loaded. Please verify the content of the data file.")
+    stop
+  ]
+
+  if (sum tableValues <= 0) ; which means that the values were not read correctly
+  [
+    print (word "ERROR: " tableName " total is less or equal to 0. Please verify the original data file.")
     stop
   ]
 
@@ -242,7 +248,7 @@ to go
   update-counters
 
   if (totalHouseholds = 0) [ stop ]
-;print "-------tick----"
+
   tick
 
 end
@@ -250,37 +256,20 @@ end
 ;;; GLOBAL ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 to update-households
-;print "-------apply-mortality----"
+
   apply-mortality
-;print "-------apply-nuptiality----"
+
   apply-nuptiality
-;print "-------apply-fertility----"
+
   apply-fertility
 
 end
 
 to apply-mortality
 
-  ; initialize population lists of orphan children for this year
-  set orphanList (list)
-
   ask households
   [
     hh_aging
-  ]
-
-  if (any? households) ; do it only in case there is any household left
-  [
-    ; distribute orphans randomly among surviving households
-    foreach n-values length orphanList [ j -> j ]
-    [
-      i ->
-
-      ask one-of households
-      [
-        hh_add-orphan (item i orphanList)
-      ]
-    ]
   ]
 
 end
@@ -294,55 +283,27 @@ to apply-nuptiality
   ; fill lists
   ask households
   [
-    ; add to the womenToMarry/menToMarry any women/men that should be marrying, accordint to the nuptiality model
     hh_set-members-to-marry
 
-    ; its important to reset the content of this list,
-    ; so that the next procedures account only for individuals moving out because they are forming couples
     set hh_memberDataToDelete (list)
   ]
 
-  ; identify internal and external matches
-  let internalMatchIndex 0
-  let externalMatchIndex 0
-  let womenWithoutMatch (length womenToMarry > length menToMarry)
-  ifelse (womenWithoutMatch)
-  [
-    set internalMatchIndex (n-values length menToMarry [ i -> i ])
-    set externalMatchIndex (n-values (length womenToMarry - length menToMarry) [ i -> i + length menToMarry])
-    ;print "There are extra women to marry"
-    ; EXAMPLE:
-    ; for length menToMarry = 10 and length womenToMarry = 15
-    ; internalMatchIndex = [ 0 1 2 3 4 5 6 7 8 9 ]
-    ; externalMatchIndex = [ 10 11 12 13 14 ]
-  ]
-  [
-    set internalMatchIndex (n-values length womenToMarry [ i -> i ])
-    set externalMatchIndex (n-values (length menToMarry - length womenToMarry) [ i -> i + length womenToMarry])
-    ;print "There are extra men to marry"
-  ]
-
-  ;print (word "internal" internalMatchIndex)
-  ;print (word "external" externalMatchIndex)
-
-  ; match every women to marry with a men to marry internally
-  foreach internalMatchIndex
+  ; match every women to marry with a men to marry until there is no combinations possible
+  let matchIndex (n-values length womenToMarry [ i -> i ])
+  foreach matchIndex
   [
     i ->
-    create-couple i
-  ]
 
-  ; iterate for every women or men with no match internally, "searching" for an external match
-  foreach externalMatchIndex
-  [
-    i ->
-    create-couple-external i womenWithoutMatch
+    if (i < length menToMarry - 1) ; if there is possible match
+    [
+      create-couple i
+    ]
   ]
 
   ; delete recently married individuals from their parent household
   ask households
   [
-    hh_delete-members-in-queue
+    hh_delete-members-in-cue
   ]
 
 end
@@ -356,11 +317,11 @@ to apply-fertility
 
 end
 
-to create-couple [ indexInSinglesList ]
+to create-couple [ index ]
 
   ; load woman and man data according to index of the womenToMarry or menToMarry lists
-  let womanData item indexInSinglesList womenToMarry ; list holding the household and member index
-  let manData item indexInSinglesList menToMarry
+  let womanData item index womenToMarry ; list holding the household and member index
+  let manData item index menToMarry
 
   let womanHousehold item 0 womanData
   let womanIndex item 1 womanData
@@ -387,94 +348,6 @@ to create-couple [ indexInSinglesList ]
 
 end
 
-to create-couple-external [ indexInSinglesList singleSex ]
-
-  let singleData 0  ; list holding the household and member index
-
-  ; load single woman or man data according to index of the womenToMarry or menToMarry lists
-  ifelse (singleSex)
-  [
-    ; there are extra women to marry
-    set singleData item indexInSinglesList womenToMarry
-  ]
-  [
-    ; there are extra men to marry
-    set singleData item indexInSinglesList menToMarry
-  ]
-
-  let singleHousehold item 0 singleData
-  let singleIndex item 1 singleData
-
-  ;print (word "Member " singleIndex " in " singleHousehold " (ages = " [hh_membersAge] of singleHousehold ", sex = " [hh_membersSex] of singleHousehold ") is marring outside the system."  )
-
-  ; find out if the new couple imply a new individual to be entering the system
-  let newIndividualIn
-  (
-    ; a new individual comes in either when...
-    ; ...the single is a woman and the residence rule is matrilocal (husband comes in)
-    (singleSex and residence-rule = "matrilocal-matrilineal")
-    or
-    ; ...the single is a men and the residence rule is patrilocal (wife comes in)
-    ((not singleSex) and residence-rule = "patrilocal-patrilineal")
-  )
-
-  ifelse (newIndividualIn)
-  [
-    ; a new individual is entering the system...
-
-    ; try to add a new couple in singleHousehold
-    ask singleHousehold
-    [
-      hh_try-to-add-couple singleIndex [ -1 -1 ] ; pass spouse data as a NULL value (messaging it should be generated)
-    ]
-
-    ; account for the new individual coming in
-    ifelse (not singleSex)
-    [
-      set womenIn womenIn + 1 ; if single is male, the new individual is female
-    ]
-    [
-      set menIn menIn + 1
-    ]
-  ]
-  [
-    ; the single individual is the one moving, so exiting the system...
-
-    ;print (word "individual from " singleHousehold " moving out the system: is female = " singleSex ", age = " (item singleIndex [hh_membersAge] of singleHousehold) )
-
-    ; add the single individual (and any children left alone) to the deletion queue of singleHousehold
-    let childrenMovingOut 0
-    ask singleHousehold
-    [
-      ; add the single individual to the deletion queue
-      set hh_memberDataToDelete lput singleIndex hh_memberDataToDelete
-
-      ; since children can be left in a household without adults AND be set to marry to an individual outside the system in the same time step,
-      ; we need to remove duplicated indexes before using hh_memberDataToDelete in hh_check-infant-only
-      set hh_memberDataToDelete remove-duplicates hh_memberDataToDelete
-
-      if (hh_check-infant-only)
-      [
-        ;print (word "all remaining individuals in " singleHousehold " are children: ages including single adult = " hh_membersAge )
-        ; add all members to deletion queue since the household would have only children (assuming they are moving out with the single individual)
-        set hh_memberDataToDelete n-values (length hh_membersAge) [ i -> i ]
-
-        set childrenMovingOut hh_count-children
-      ]
-    ]
-
-    ; account for the single individual going out
-    ifelse (singleSex)
-    [
-      set womenOut womenOut + 1 + childrenMovingOut
-    ]
-    [
-      set menOut menOut + 1 + childrenMovingOut
-    ]
-  ]
-
-end
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; HOUSEHOLDS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -496,13 +369,13 @@ end
 
 to-report hh_get-initial-age
 
-  report item 0 householdInitialAgeDistribution + random (item 1 householdInitialAgeDistribution - item 0 householdInitialAgeDistribution + 1)
+  report item 0 householdInitialAge + random (item 1 householdInitialAge)
 
 end
 
 to-report hh_get-initial-max-couple-count
 
-  report item 0 maxCoupleCountDistribution + random (item 1 maxCoupleCountDistribution - item 0 maxCoupleCountDistribution + 1)
+  report item 0 maxCoupleCountDistribution + random (item 1 maxCoupleCountDistribution)
 
 end
 
@@ -543,9 +416,9 @@ to-report hh_get-initial-marriage-age [ isFemale ]
 
   ; get a marriage age as a stochastic function of nuptiality rates in earlier years
   let notMarried true
-  let i 0
+  let i item 0 nuptialityMinMax
 
-  while [notMarried AND i < 100]
+  while [notMarried AND i < item 1 nuptialityMinMax]
   [
     if ((get-nuptiality isFemale i) > random-float 1)
     [
@@ -592,7 +465,7 @@ to hh_update-members-survival
     (random-float 1 < get-mortality (item i hh_membersSex) (item i hh_membersAge))
   ] membersIndex
 
-  ; iterate for the members from last to first, eliminating those that should be dying
+  ; iterates the members from last to first, eliminating those that should be dying
   let index (length membersIndex) - 1
   repeat length membersIndex
   [
@@ -622,26 +495,6 @@ to hh_update-members-survival
     [
       set hh_membersMarriage replace-item i hh_membersMarriage -1
       ;print (word "a member of " self " has lost her/his partner.")
-    ]
-  ]
-
-  ; check if the household is left without any adult
-  if (hh_check-infant-only)
-  [
-    ; there is no adult in this household, so the children will enter the orphanList so they can be adopted later
-    ;print (word "all remaining individuals in " self " are children: is female = " hh_membersSex ", ages = " hh_membersAge ". They are now in the orphan list.")
-
-    ; iterate for the members from last to first
-    set index (length membersIndex) - 1
-    repeat length membersIndex
-    [
-      ; add children data (sex, age) to the orphan list (they are distributed among other households once aging procedures are done)
-      set orphanList lput (list (item index hh_membersSex) (item index hh_membersAge) ) orphanList
-
-      ; and delete them from the current household (eventualy erasing it)
-      hh_delete-member index
-
-      set index index - 1
     ]
   ]
 
@@ -676,46 +529,43 @@ to hh_set-members-to-marry
 
 end
 
-to hh_try-to-add-couple [ selfIndex spouseData ]
+to hh_try-to-add-couple [ index spouseData ]
 
-  ; check if new couple fits in self's household
+  ; check if new couple fits in man's household
   let tooManyCouples (hh_count-couples + 1) > hh_maxCoupleCount
 
   ifelse (tooManyCouples)
   [
-    ; the new couple must found a new household, descending from self's household
+    ; the new couple must found a new household, descending from ego's household
     ;print "household fission"
-    hh_household-fission selfIndex spouseData
+    hh_household-fission index spouseData
   ]
   [
-    ; the new couple can stay in the self's parent household
-    hh_add-couple selfIndex spouseData
+    ; the new couple can stay in the ego parent's household
+    hh_add-couple index spouseData
   ]
 
 end
 
-to hh_household-fission [ selfIndex spouseData ]
+to hh_household-fission [ index spouseData ]
 
-  ; creates a new household descending from self household,
-  ; adding self and spouse and
+  ; creates a new household descending from ego household,
+  ; adding ego and spouse and
   ; deleting them from the respective parent households
+  let egoHousehold self
 
-  ;print (word self " is fissioning")
-
-  let selfHousehold self
-
-  ; create new household w/ self and spouse
+  ; create new household w/ ego and spouse
   hatch 1
   [
     set hh_householdAge 0
-    ; inherit hh_maxCoupleCount value from self's parent
+    ; inherit hh_maxCoupleCount value from ego's parent
 
     hh_reset-members
 
-    ; add self
-    hh_add-member-from (list selfHousehold selfIndex)
-    ; add spouse
-    hh_add-spouse 0 spouseData ; 0 is the index of the self individual in the new household
+    ; copy ego
+    hh_add-member-from (list egoHousehold index)
+    ; copy spouse
+    hh_add-member-from spouseData
 
     ; account for the new couple
     set hh_membersMarriage lput 0 hh_membersMarriage ; 0 because this is the first couple of the new household
@@ -727,23 +577,118 @@ to hh_household-fission [ selfIndex spouseData ]
 
 end
 
-to hh_add-couple [ selfIndex spouseData ]
+to hh_add-couple [ index spouseData ]
 
-  ; add spouse to self's household
-  ;print (word "adding couple to " self)
+  ; add spouse to ego's household
 
-  hh_add-spouse selfIndex spouseData
+  ; copy spouse
+  hh_add-member-from spouseData
 
   ; account for the new couple
   let newCoupleIndex 1 + max hh_membersMarriage ; create a new couple index
-  set hh_membersMarriage replace-item selfIndex hh_membersMarriage newCoupleIndex ; update self's marriage status
-  set hh_membersMarriage lput newCoupleIndex hh_membersMarriage ; add another corresponding to the spouse
+  set hh_membersMarriage replace-item index hh_membersMarriage newCoupleIndex ; update ego marriage status
+  set hh_membersMarriage lput newCoupleIndex hh_membersMarriage
 
 end
 
+;to update-members-marriage
+;
+;  ; applies age-specific nuptiality rates,
+;  ; delete every men marrying (assumes men are more mobile)
+;  ; or, if women,
+;  ; add a new (random) husband for every women marrying (if tolerable number of couples)
+;  ; or create a new household with the woman and her husband.
+;
+;  let membersIndex (n-values length hh_membersAge [ i -> i ])
+;
+;  ; define a list with true/false values flagging which members is marrying during the current year, according to her/his age cohort
+;  let marrying? map
+;  [
+;    i ->
+;    (random-float 1 < get-nuptiality (item i hh_membersSex) (item i hh_membersAge))
+;  ] membersIndex
+;
+;  ; iterates the members from last to first
+;  let i (length membersIndex) - 1
+;  repeat length membersIndex
+;  [
+;    if (item i marrying? and (item i hh_membersMarriage = -1)) ; the second term makes sure that the member is single
+;    [
+;      ;print (word "member from " self " is marrying with age " (item i hh_membersAge))
+;      ifelse (not item i hh_membersSex)
+;      [
+;        ; a marrying man exits the household
+;        hh_delete-member i
+;        ;print "  He is going out of the household."
+;        set husbandsOut husbandsOut + 1
+;      ]
+;      [
+;        ifelse (hh_maxCoupleCount < hh_count-couples + 1)
+;        [
+;          ; a marrying woman that cannot form a new couple inside her household
+;          ; creates a new household with the woman and her new husband
+;          hh_household-fission i (item i hh_membersAge)
+;          ; the marrying woman exits the household
+;          hh_delete-member i
+;          ;print (word "  She is founding the new " (max-one-of households [who]))
+;        ]
+;        [
+;          ; a marrying woman that can form a new couple inside her household
+;          ; add her new husband to this household
+;          let newCoupleIndex 1 + max hh_membersMarriage ; create a new couple index
+;          set hh_membersMarriage replace-item i hh_membersMarriage newCoupleIndex ; the woman is now married
+;          add-husband newCoupleIndex
+;          ;print "  Her husband joins the household."
+;          set husbandsIn husbandsIn + 1
+;        ]
+;      ]
+;    ]
+;    set i i - 1
+;  ]
+;
+;end
+
+;to hh_household-fission [ founderIndex founderAge ]
+;
+;  ; Creates a new household with the founder member
+;  ; and set variables in new household.
+;  let parentHousehold self
+;
+;  hatch 1
+;  [
+;    set hh_householdAge 0
+;    ; inherit hh_maxCoupleCount value from parent
+;
+;    set hh_membersAge (list)
+;    set hh_membersSex (list)
+;    set hh_membersMarriage (list)
+;
+;    ; copy woman founding the new household
+;    set hh_membersAge lput founderAge hh_membersAge
+;    set hh_membersSex lput true hh_membersSex ; it is a woman
+;    set hh_membersMarriage lput 0 hh_membersMarriage ; this is the first couple of the new household
+;
+;    add-husband 0 ; add the husband as part of the first couple
+;
+;    ;;; move to empty or less crowded patch, just in sake of visualisation
+;    move-to min-one-of patches [count households-here]
+;  ]
+;
+;end
+
+;to add-husband [ coupleIndex ]
+;
+;  ; add a male (with valid age of marriage) to the household
+;  let ageOfMarriage hh_get-initial-marriage-age false
+;  set hh_membersAge lput ageOfMarriage hh_membersAge
+;  set hh_membersSex lput false hh_membersSex
+;  set hh_membersMarriage lput coupleIndex hh_membersMarriage
+;
+;end
+
 to hh_reproduction
 
-  ; iterate for the members, up to the number of couples,
+  ; iterates the members, up to the number of couples,
   ; testing women for the corresponding fertility rate
   ; and generates a new born individual if passing test.
 
@@ -767,28 +712,6 @@ to hh_reproduction
 
 end
 
-to hh_add-spouse [ selfIndex spouseData ]
-
-  ; if spouseData is NULL -> [ -1 -1 ]
-  ifelse (item 0 spouseData = -1)
-  [
-    ; The spouse is entering the system:
-    ; generate and add spouse's sex and age
-    set hh_membersSex lput (not item selfIndex hh_membersSex) hh_membersSex ; opposite sex from selfIndex's
-    set hh_membersAge lput (hh_get-initial-marriage-age (last hh_membersSex)) hh_membersAge ; get the age as a function of sex-specific nuptiality
-
-    ;print (word "new spouse added to " self ": is female = " (last hh_membersSex) ", age = " (last hh_membersAge))
-  ]
-  [
-    ; The spouse is already in the system:
-    ; copy spouse
-    hh_add-member-from spouseData
-
-    ;print (word "spouse moving from " (Household (item 1 spouseData)) " to " self ": is female = " (last hh_membersSex) ", age = " (last hh_membersAge))
-  ]
-
-end
-
 to hh_add-member-from [ memberData ]
 
   let aHousehold item 0 memberData
@@ -797,14 +720,14 @@ to hh_add-member-from [ memberData ]
   set hh_membersAge lput item index ([hh_membersAge] of aHousehold) hh_membersAge
   set hh_membersSex lput item index ([hh_membersSex] of aHousehold) hh_membersSex
 
-  ; add member to deletion queue of original parent household
+  ; cue deletion of member from original parent household
   ask aHousehold
   [
+    ;print (word "add-member spouse " memberData)
     set hh_memberDataToDelete lput index hh_memberDataToDelete
   ]
 
 end
-
 to hh_add-offspring [ initialAge ]
 
   ; add a newborn to the household
@@ -818,32 +741,15 @@ to hh_add-offspring [ initialAge ]
 
 end
 
-to hh_add-orphan [ orphanData ]
+to hh_delete-members-in-cue
 
-  ; add an orphan child to the household
-  ; orphanData is assumed to be: [ <sex> <age> ]
-
-  set hh_membersSex lput (item 0 orphanData) hh_membersSex
-  set hh_membersAge lput (item 1 orphanData) hh_membersAge
-  set hh_membersMarriage lput -1 hh_membersMarriage ; any orphan is assumed single
-  ;(when children "marry", they will share the household with the spouse. If they are found an orphan is because the spouse is either dead or is also an orphan)
-
-  ;print (word "the orphan (is female = " (item 0 orphanData) ", age = " (item 1 orphanData) ") is adopted by " self ": are females = " hh_membersSex ", ages = " hh_membersAge )
-
-end
-
-to hh_delete-members-in-queue
-
-  ; delete members in queue following decresing order (so indexes still to go remain valid)
+  ; delete members in cue following decresing order (so indexes still to go remain valid)
   foreach sort-by > hh_memberDataToDelete
   [
     i ->
     ; delete member from this household
     hh_delete-member i
   ]
-
-  ; reset queue
-  set hh_memberDataToDelete (list)
 
 end
 
@@ -856,29 +762,6 @@ to hh_delete-member [ index ]
   ; thus discounting a couple in hh_count-couples
 
   if (length hh_membersAge = 0) [ die ] ; delete empty household
-
-end
-
-to-report hh_check-infant-only
-
-  ; filter out the members selected to be deleted
-  let membersAgeWithoutQueuToDelete hh_membersAge
-
-  foreach sort-by > hh_memberDataToDelete
-  [
-    i ->
-    set membersAgeWithoutQueuToDelete remove-item i membersAgeWithoutQueuToDelete
-  ]
-
-  if (length membersAgeWithoutQueuToDelete = 0) [ report false ] ; report false in case there is no members that are not in queue to deletion
-
-  report reduce and (map [i -> i < maturityAge] membersAgeWithoutQueuToDelete)
-
-end
-
-to-report hh_count-children
-
-  report length filter [i -> i < maturityAge] hh_membersAge
 
 end
 
@@ -897,40 +780,6 @@ to hh_reset-members
   set hh_membersMarriage (list)
 
   set hh_memberDataToDelete (list)
-
-end
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Demographic rates 'getters' ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-to-report get-fertility [ age ]
-
-  report item age fertilityTable
-
-end
-
-to-report get-nuptiality [ isFemale age ]
-
-  ifelse (isFemale)
-  [
-    report item age nuptialityTable-women
-  ]
-  [
-    report item age nuptialityTable-men
-  ]
-
-end
-
-to-report get-mortality [ isFemale age ]
-
-  ifelse (isFemale)
-  [
-    report item age mortalityTable-women
-  ]
-  [
-    report item age mortalityTable-men
-  ]
 
 end
 
@@ -982,17 +831,21 @@ to update-counters
     ]
   ]
 
-  carefully [ set totalPopulationGrowth 100 * (totalIndividuals - oldTotalIndividual) / oldTotalIndividual ] [ ]
+  carefully [ set naturalPopulationGrowth 100 * (totalIndividuals - oldTotalIndividual) / oldTotalIndividual ] [ ]
 
   carefully [ set femaleRatio totalWomen / totalIndividuals ] [ set femaleRatio "" ]
-
-  carefully [ set totalOrphans length orphanList ] [ set totalOrphans 0 ]
 
 end
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; DISPLAY ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+to refresh-view
+
+
+
+end
 
 to plot-table [ values ]
 
@@ -1003,7 +856,6 @@ to plot-table [ values ]
     plotxy j i
     set j j + 1
   ]
-  plot-pen-up
 
 end
 
@@ -1011,28 +863,289 @@ end
 ;;; DEMOGRAPHY TABLES ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-to build-demography-tables
+; NOTE: may be greatly simplified if tables are pre-processed
+; to express probabilities for one-year-old cohorts
+
+to load-demography-tables
 
   ;;; load demographic data tables into lists
+  ;;; NOTE: in any case, values are probabilities of events for individuals either
+  ;;; with x years old or from n years old to x years old.
 
   ;=======FERTILITY========================================================
 
-  build-fertility-tables
+  if (input-fertility-table = "1970-1972 India")
+  [
+    set womenFertilityTable load-table-empirical "womenFertilityTable_1year"
+    ;set womenFertilityTable convert-to-single-age womenFertilityTable "fertility"
+  ]
+
+  if (input-fertility-table = "Coale-Trussell model")
+  [
+    set womenFertilityTable load-table-ctmodel
+    set womenFertilityTable convert-to-single-age womenFertilityTable "fertility"
+  ]
+
+  if (input-fertility-table = "Beta distribution model")
+  [
+    set womenFertilityTable load-table-betaDist
+  ]
 
   ;=======NUPTIALITY========================================================
 
-  build-nuptiality-tables
+  if (input-nuptiality-table = "1901-1911 India")
+  [
+    set womenNuptialityTable load-table-empirical "womenNuptialityTable_1year"
+    ;set womenNuptialityTable convert-to-single-age womenNuptialityTable "nuptiality"
+
+    set menNuptialityTable load-table-empirical "menNuptialityTable_1year"
+    ;set menNuptialityTable convert-to-single-age menNuptialityTable "nuptiality"
+  ]
+
+  if (input-nuptiality-table = "Coale double exp model")
+  [
+    set womenNuptialityTable load-table-cdemodel
+
+    set menNuptialityTable load-table-cdemodel
+  ]
 
   ;=======MORTALITY========================================================
 
-  build-mortality-tables
+  if (input-life-table = "1901 India")
+  [
+
+    set womenMortalityTable load-table-empirical "womenMortalityTable_1year"
+    ;set womenMortalityTable convert-to-single-age womenMortalityTable "mortality"
+
+    set menMortalityTable load-table-empirical "menMortalityTable_1year"
+    ;set menMortalityTable convert-to-single-age menMortalityTable "mortality"
+  ]
+
+  if (input-life-table = "Coale-Demeny Model")
+  [
+    set womenMortalityTable load-table-cdmodel "F"
+    set womenMortalityTable convert-to-single-age womenMortalityTable "mortality"
+
+    set menMortalityTable load-table-cdmodel "M"
+    set menMortalityTable convert-to-single-age menMortalityTable "mortality"
+  ]
 
 end
 
+to-report convert-to-single-age [ ageGroupTable tableType ]
 
-to build-fertility-tables
+  ;;; converts ago cohort rates/probabilities (between age x and x+n) to instantaneous rates (age x)
+  let singleAgeTable (list)
 
-  set fertilityTable load-peristeri-kostaki-model-table c1-fert mu-fert sigma1-fert sigma2-fert
+  if (tableType = "fertility")
+  [
+    let ages n-values 100 [ i -> i ]
+    foreach ages
+    [
+      i ->
+      let value 0
+      if (i >= item 0 fertilityMinMax and i < item 1 fertilityMinMax)
+      [
+        let cohort get-cohort
+            i
+            fertilityCohortSize
+            (floor (item 0 fertilityMinMax) / fertilityCohortSize) ; discounts the cohorts that may exist before minimum age in table
+        set value (item cohort ageGroupTable) ;/ fertilityCohortSize
+      ]
+
+      set singleAgeTable lput value singleAgeTable
+    ]
+  ]
+  if (tableType = "nuptiality")
+  [
+    let ages n-values 100 [ i -> i ]
+    foreach ages
+    [
+      i ->
+      let value 0
+      if (i >= item 0 nuptialityMinMax and i < item 1 nuptialityMinMax)
+      [
+        let cohort 0
+        let thisCohortSize nuptialityCohortSize
+
+        ; handle cohort 0-5 (actually interval of six years old?)
+        ifelse (i >= 0 and i <= 5)
+        [
+          set thisCohortSize 6
+        ]
+        [
+          set cohort get-cohort
+            (i - 1) ; include threshold age inside the earlier cohort (e.g., 15 count as 14)
+            nuptialityCohortSize
+            (floor (item 0 nuptialityMinMax) / nuptialityCohortSize) ; discounts the cohorts that may exist before minimum age in table
+          set thisCohortSize nuptialityCohortSize
+        ]
+        set value (item cohort ageGroupTable) ;/ thisCohortSize
+      ]
+      set singleAgeTable lput value singleAgeTable
+    ]
+  ]
+  if (tableType = "mortality")
+  [
+    let ages n-values 100 [ i -> i ]
+    foreach ages
+    [
+      i ->
+      let value 0
+      let cohort i
+      let thisCohortSize mortalityCohortSize
+
+      ifelse (i = 0 or i = 1)
+      [
+        ; mortality tables have rates specific to ages 0 and 1, so age functions as cohort
+        ; and the rates are passed as it is
+        set thisCohortSize 1
+      ]
+      [
+        ifelse (i >= item 1 mortalityMinMax) ; if a member ages beyond the maximum in the table
+        [
+          set cohort (length ageGroupTable) - 1 ; make it count as the last cohort
+        ]
+        [
+          set cohort get-cohort
+            (i - 1) ; include threshold age inside the earlier cohort (e.g., 15 count as 14)
+            mortalityCohortSize
+            -2 ; accounts for the two first 1-year cohorts (adds 2 instead of discounting)
+        ]
+        ; solve the exception of cohort 2-5 years old
+        if (i <= 5)
+        [
+          set thisCohortSize 4
+        ]
+      ]
+
+      ; except for cohorts 0, 1, and 2-5 years old, the rate is distributed for each year within mortalityCohortSize years
+      set value (item cohort ageGroupTable) ;/ thisCohortSize
+      set singleAgeTable lput value singleAgeTable
+    ]
+  ]
+
+  report singleAgeTable
+
+end
+
+to-report get-fertility [ age ]
+
+  ; return 0 if outside the range of ages considered in the table
+  if (age >= 100) [ report 0 ]
+
+  report item age womenFertilityTable
+
+end
+
+to-report get-nuptiality [ isFemale age ]
+
+  ; return 0 if outside the range of ages considered in the table
+  if (age >= 100) [ report 0 ]
+
+  ifelse (isFemale)
+  [
+    report item age womenNuptialityTable
+  ]
+  [
+    report item age menNuptialityTable
+  ]
+
+end
+
+to-report get-mortality [ isFemale age ]
+
+  ; return 1 if outside the range of ages considered in the table
+  if (age >= 100) [ report 1 ]
+
+  ifelse (isFemale)
+  [
+    report item age womenMortalityTable
+  ]
+  [
+    report item age menMortalityTable
+  ]
+
+end
+
+to-report get-cohort [ age cohortSize cohortAdjustment ]
+
+  report (floor ( (age) / cohortSize)) - cohortAdjustment
+
+end
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; IMPORT/GENERATE TABLES ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+to-report load-table-empirical [ tableName ]
+
+  ;;; this function assumes there is a text file (.../demoTables/<tableName>.txt)
+  ;;; containing:
+  ;;; 1. a reference text encloused in "" (first line)
+  ;;; 2. a row containing min age<SPACE>max age<SPACE>cohort size in years (second line)
+  ;;; 3. two columns separated by <SPACE> containing:
+  ;;;   a. row identifier (e.g. cohort age range)
+  ;;;   b. data (e.g. fertility rate)
+  let demoTable (list)
+
+  let FilePath "demoTables//"
+  let filename (word FilePath "table_" tableName ".txt")
+  let temp 0
+  file-open filename
+
+  ;set temp file-read ; this line skips the reference text
+  ; load the three table parameters (NOTE: there is a redundancy, assuming female/male tables of a type have the same values)
+  ;load-table-empirical-pars tableName
+
+  while [not file-at-end?]
+  [
+    set temp file-read ; this line skips the row identifier
+
+    set demoTable lput file-read demoTable ; load row datum
+  ]
+  file-close
+
+  load-table-empirical-pars tableName demoTable
+
+  report demoTable
+
+end
+
+to load-table-empirical-pars [ tableName table ]
+
+  if (member? "Fertility" tableName)
+  [
+    set fertilityMinMax get-table-min-max table;(list file-read file-read)
+    ;set fertilityCohortSize file-read
+  ]
+  if (member? "Nuptiality" tableName)
+  [
+    set nuptialityMinMax  get-table-min-max table;(list file-read file-read)
+    ;set nuptialityCohortSize file-read
+  ]
+  if (member? "Mortality" tableName)
+  [
+    set mortalityMinMax  get-table-min-max table;(list file-read file-read)
+    ;set mortalityCohortSize file-read
+  ]
+
+end
+
+to-report get-table-min-max [ table ]
+
+  let tempAgeList (list 0)
+
+  foreach (n-values 148 [ i -> i ])
+  [
+    i ->
+    if (item (i + 1) table = 0) [ set tempAgeList lput (i + 1) tempAgeList ]
+  ]
+  set tempAgeList lput 150 tempAgeList
+
+  let minMax (list (first tempAgeList) (last tempAgeList))
+
+  report minMax
 
 end
 
@@ -1067,113 +1180,144 @@ end
 ;
 ;end
 
-to build-nuptiality-tables
 
-  set nuptialityTable-women load-peristeri-kostaki-model-table c1-women mu-women sigma1-women sigma2-women
+to-report load-table-ctmodel ;;; INCOMPLETE
 
-  set nuptialityTable-men load-peristeri-kostaki-model-table c1-men mu-men sigma1-men sigma2-men
+  ;;; this function creates the probability of generating offspring for every one-year age cohort
+  ;;; using the Coale-Trussel model from:
+  ;;; Ansley J. Coale and T. James Trussell. "Model fertility schedules: variations in
+  ;;; the age structure of childbearing in human populations", Population Index, vol. 40. No. 2 (April 1974). pp. 185-258.
+  ;;; see page 23-4 (Chapter 1) in
+  ;;; http://www.un.org/en/development/desa/population/publications/manual/estimate/demographic-estimation.shtml
+  let demoTable (list)
 
-end
+  ; standard pattern of natural fertility and of deviations from natural fertility
+  ; (Table 3, p. 24)
+  ; h(i)
+  let naturalFertility (list
+    0.411 ; 15-19
+    0.460 ; 20-24
+    0.431 ; 25-29
+    0.395 ; 30-34
+    0.322 ; 35-39
+    0.167 ; 40-44
+    0.024 ; 45-49
+    )
+  ; h(i)
+  let devNaturalFertility (list
+    0.000  ; 15-19
+    0.000  ; 20-24
+    -0.279 ; 25-29
+    -0.667 ; 30-34
+    -1.042 ; 35-39
+    -1.414 ; 40-44
+    -1.671 ; 45-49
+    )
 
-to-report load-peristeri-kostaki-model-table [ c1 mu sigma1 sigma2 ]
-
-  ;;; The following correspond to the first parametric model in:
-
-  ;;; Peristeva and Kostaki, 2009, p. 147
-  ;;; "Modeling fertility in modern populations"
-  ;;; Demographic Research 16: 141-194
-  ;;; Available from: https://dx.doi.org/10.4054/DemRes.2007.16.6
-
-  ;;; Peristeva and Kostaki (2015), p. 133
-  ;;; "A parametric model for estimating nuptiality patterns in modern populations"
-  ;;; Canadian studies in population 42(2):130-148. DOI: 10.25336/P6TK56
-  ;;; Available from: https://www.researchgate.net/publication/285457704_A_parametric_model_for_estimating_nuptiality_patterns_in_modern_populations [accessed Nov 27 2018].
-  ;;; use "demoTables/compareNuptialityModel.R" to test shapes
-
-  let marriageProbs (list)
-
-  foreach n-values 151 [ i -> i ]
+  let cohorts n-values 7 [ i -> i ]
+  foreach cohorts
   [
     i ->
-    let sigma sigma1
-    if (i > mu) [ set sigma sigma2 ]
-
-    set marriageProbs lput (
-      c1 * exp (-1 * (((i - mu) / sigma) ^ 2))
-    ) marriageProbs
+    set demoTable lput (
+      ct-level-natural-fertility * (item i naturalFertility) * exp (ct-level-fertility-control * (item i devNaturalFertility))
+    ) demoTable
   ]
 
-  report marriageProbs
+  set fertilityMinMax (list 15 45)
+  set fertilityCohortSize 5
+
+  report demoTable
 
 end
 
-to build-mortality-tables
+to-report load-table-cdemodel
 
-  set mortalityTable-women load-coale-demeny-table true
+  ;;; this function creates the probability of (first) marriage for every one-year age cohort
+  ;;; using a version of the double exponential model (closed form) proposed by
+  ;;; A. J. Coale, "Age patterns of marriage",
+  ;;; see page 22 (Chapter 1) in
+  ;;; http://www.un.org/en/development/desa/population/publications/manual/estimate/demographic-estimation.shtml
+  ;;; Also in
+  ;;; Coale, A.J., and D.R. McNeil. 1972.
+  ;;; The distribution by age of the frequency of first marriage in a female cohort. Journal of  the American Statistical Association 67(340):743–49.
+  ;;; REF obtained in: A parametric model for estimating nuptiality patterns in modern populations.
+  ;;; Available from: https://www.researchgate.net/publication/285457704_A_parametric_model_for_estimating_nuptiality_patterns_in_modern_populations [accessed Nov 27 2018].
 
-  set mortalityTable-men load-coale-demeny-table false
+  ;;; The model is aimed to fit women nuptiality, but is here used for both female and male individuals
+  ;;; copy&run the following command in R to visualise the function output for ages between 0 and 100:
+  ;;; plot(1:100, 0.1946 * exp(-0.174 * (1:100 - 6.06) - exp(-0.2881 * (1:100 - 6.06))))
+  ; given estimated values for parameters are:
+  ; alpha = 0.1946 --- regulates the overall level of nuptiality
+  ; beta = -0.174 --- regulates the overall level of nuptiality
+  ; gamma = -0.2881 --- absolute greater values bring less nuptiality to earlier ages
+  ; delta = 6.06 --- absolute greater values bring higher nuptiality to earlier ages
+
+  let demoTable (list)
+
+  let cohorts n-values 100 [ i -> i ]
+  foreach cohorts
+  [
+    i ->
+;    let term1 i - cde-delta
+;    let term2 exp(cde-gamma * term1)
+;
+;    set demoTable lput (
+;      cde-alpha * exp(cde-beta * term1 - term2)
+;    ) demoTable
+
+    let term1 cde-E / cde-sigma
+    let term2 ((i - cde-mu) / cde-sigma) + 0.805
+    set demoTable lput (
+      term1 * 1.2813 * exp (-1.145 * term2 - exp (-1.896 * term2) )
+    ) demoTable
+  ]
+
+  set nuptialityMinMax (list 0 100)
+  set nuptialityCohortSize 1
+
+  report demoTable
 
 end
 
-to-report load-coale-demeny-table [ isFemale ]
-
-  ;;; Coale-Demeny Life Tables Model
-  ;;; tables generated with 'cdmlt' functions in 'demoR' package
-  ;;; demoR package version 0.6.0 (2018-09-13)
-  ;;; by James Holland Jones and collaborators
-  ;;; Their source:
-  ;;; Coale, A., P. Demeny, and B. Vaughn. 1983.
-  ;;; Regional model life tables and stable populations.
-  ;;; 2nd ed. New York: Academic Press.
-
-  ;;; Tables were generated using the R script 'importCoaleDemenyLifeTables.R'
-  ;;; included in the demoTables folder.
+to-report load-table-cdmodel [ sex ]
 
   ;;; this function assumes there is a text file (.../demoTables/cdmlt<coale-demeny-region><sex>.txt)
   ;;; containing a matrix with prob. of death for life-expentancy-level (rows) by age cohort (columns).
   ;;; values of the first row and columns should be skipped
+  let demoTable (list)
 
-  let sex "F"
-  if (not isFemale) [ set sex "M" ]
-
-  let nqx (list)
-
-  ; read file corresponding to coale-demeny-region and sex
   let FilePath "demoTables//"
   let filename (word FilePath "cdmlt" (first coale-demeny-region) sex ".txt")
-
+  let temp 0
   file-open filename
-
-  ; skip first line (header)
-  let temp file-read-line
+  ; first line and set pars
+  set temp read-from-string (word "[" file-read-line "]") ; the first line is the age cohort identifiers
+  set mortalityMinMax (list (read-from-string item 0 temp) (read-from-string item (length temp - 1) temp))
+  set mortalityCohortSize 5
 
   ; read lines and get the one corresponding to coale-demeny-life-expectancy-level
   let i 1
   while [not file-at-end?]
   [
-    ; read line
     set temp read-from-string (word "[" file-read-line "]")
-    ; select value corresponding to coale-demeny-life-expectancy-level (because the first item is 0, the values skips the first column or row names)
-    set nqx lput (item cdmlt-level temp) nqx
-
-;    if (read-from-string item 0 temp = cdmlt-level)
-;    [
-;      set nqx remove-item 0 temp
-;    ]
+    if (read-from-string item 0 temp = coale-demeny-life-expectancy-level)
+    [
+      set demoTable remove-item 0 temp
+    ]
     set i i + 1
   ]
 
   file-close
 
-  report nqx
+  report demoTable
 
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-248
-10
-560
-323
+713
+11
+1025
+324
 -1
 -1
 16.0
@@ -1197,9 +1341,9 @@ ticks
 30.0
 
 BUTTON
-15
+97
 10
-78
+152
 43
 NIL
 setup
@@ -1208,16 +1352,16 @@ NIL
 T
 OBSERVER
 NIL
-1
+NIL
 NIL
 NIL
 1
 
 BUTTON
-93
-11
-148
-44
+98
+48
+153
+81
 NIL
 go
 NIL
@@ -1225,16 +1369,16 @@ NIL
 T
 OBSERVER
 NIL
-2
+NIL
 NIL
 NIL
 1
 
 INPUTBOX
-69
-56
-143
-116
+14
+38
+88
+98
 SEED
 0.0
 1
@@ -1242,31 +1386,31 @@ SEED
 Number
 
 CHOOSER
-38
-122
-176
-167
-type-of-experiment
-type-of-experiment
+14
+125
+152
+170
+experiment-type
+experiment-type
 "user-defined" "random"
 0
 
 INPUTBOX
-22
-258
-144
-318
+13
+178
+135
+238
 initial-num-households
-25.0
+0.0
 1
 0
 Number
 
 MONITOR
-34
-318
-135
-355
+14
+237
+115
+274
 NIL
 initialNumHouseholds
 0
@@ -1274,32 +1418,32 @@ initialNumHouseholds
 9
 
 INPUTBOX
-2
-365
-170
-425
-household-initial-age-distribution
-0 30
+11
+287
+122
+347
+household-initial-age
+0
 1
 0
 String
 
 INPUTBOX
-10
-485
-166
-545
+11
+352
+132
+412
 max-couple-count-distribution
-1 6
+0
 1
 0
 String
 
 PLOT
-627
-311
-1064
-431
+7
+466
+572
+616
 Households
 NIL
 NIL
@@ -1315,10 +1459,10 @@ PENS
 "couples" 1.0 0 -7500403 true "" "plot sum [hh_count-couples] of households"
 
 PLOT
-628
-569
-1098
-689
+135
+316
+605
+436
 Age structure
 NIL
 NIL
@@ -1328,16 +1472,16 @@ NIL
 10.0
 true
 true
-"set-histogram-num-bars 20\nset-plot-x-range -1 max (sentence womenAgeStructure menAgeStructure)" "set-plot-y-range 0 10\n;set-histogram-num-bars 20\nset-plot-x-range -1 max (sentence womenAgeStructure menAgeStructure)"
+"set-histogram-num-bars 20\nset-plot-x-range -1 101;max (sentence womenAgeStructure menAgeStructure)" ";set-histogram-num-bars 20\n;set-plot-x-range -1 max (sentence womenAgeStructure menAgeStructure)"
 PENS
 "women" 1.0 1 -2674135 true "" "histogram womenAgeStructure"
 "men" 1.0 1 -13345367 true "" "histogram menAgeStructure"
 
 MONITOR
-1019
-623
-1092
-668
+526
+370
+599
+415
 NIL
 femaleRatio
 4
@@ -1345,9 +1489,9 @@ femaleRatio
 11
 
 PLOT
-626
+166
 10
-1044
+607
 160
 Population
 NIL
@@ -1365,10 +1509,10 @@ PENS
 "men" 1.0 0 -13345367 true "" "plot totalMen"
 
 PLOT
-627
-431
-1063
-557
+8
+628
+568
+754
 maxCoupleCount and actual count
 NIL
 NIL
@@ -1380,18 +1524,18 @@ true
 true
 "set-plot-y-range -1 (1 + item 1 maxCoupleCountDistribution)" ""
 PENS
-"max. mean" 1.0 0 -8053223 true "" "plot mean [hh_maxCoupleCount] of households"
-"max. max" 1.0 0 -8630108 true "" "plot max [hh_maxCoupleCount] of households"
-"max. min" 1.0 0 -5825686 true "" "plot min [hh_maxCoupleCount] of households"
+"mean" 1.0 0 -8053223 true "" "plot mean [hh_maxCoupleCount] of households"
+"max" 1.0 0 -8630108 true "" "plot max [hh_maxCoupleCount] of households"
+"min" 1.0 0 -5825686 true "" "plot min [hh_maxCoupleCount] of households"
 "count mean" 1.0 0 -15582384 true "" "plot mean [hh_count-couples] of households"
 "count max" 1.0 0 -14454117 true "" "plot max [hh_count-couples] of households"
 "count min" 1.0 0 -12345184 true "" "plot min [hh_count-couples] of households"
 
 MONITOR
-1085
-166
-1186
-211
+611
+149
+712
+194
 women death rate
 womenDeaths / totalWomen
 4
@@ -1399,10 +1543,10 @@ womenDeaths / totalWomen
 11
 
 MONITOR
-1212
-164
-1312
-209
+611
+196
+709
+241
 men death rate
 menDeaths / totalMen
 4
@@ -1410,10 +1554,10 @@ menDeaths / totalMen
 11
 
 PLOT
-627
-160
-1078
-310
+155
+167
+606
+317
 Births and deaths
 NIL
 NIL
@@ -1433,10 +1577,10 @@ PENS
 "men births" 1.0 0 -11881837 true "" "plot menBirths"
 
 MONITOR
-1085
-120
-1178
-165
+611
+246
+704
+291
 women birth rate
 womenBirths / totalWomen
 4
@@ -1444,10 +1588,10 @@ womenBirths / totalWomen
 11
 
 MONITOR
-1212
-119
-1305
-164
+610
+292
+702
+337
 men birth rate
 menBirths / totalMen
 4
@@ -1455,10 +1599,10 @@ menBirths / totalMen
 11
 
 BUTTON
-159
-11
-214
-44
+97
+87
+152
+120
 NIL
 go
 T
@@ -1466,41 +1610,146 @@ T
 T
 OBSERVER
 NIL
-3
 NIL
 NIL
+NIL
+1
+
+CHOOSER
+579
+571
+784
+616
+input-life-table
+input-life-table
+"1901 India" "Coale-Demeny Model"
 1
 
 SLIDER
-409
-365
-612
-398
-cdmlt-level
-cdmlt-level
+578
+636
+786
+669
+coale-demeny-life-expectancy-level
+coale-demeny-life-expectancy-level
 1
 25
-8.0
+0.0
 1
 1
-levels from 1 to 25
+NIL
 HORIZONTAL
 
 CHOOSER
-408
-398
-549
-443
+580
+668
+721
+713
 coale-demeny-region
 coale-demeny-region
 "west" "east" "south" "north"
+2
+
+CHOOSER
+793
+572
+973
+617
+input-nuptiality-table
+input-nuptiality-table
+"1901-1911 India" "Coale double exp model"
 1
 
+CHOOSER
+995
+570
+1169
+615
+input-fertility-table
+input-fertility-table
+"1970-1972 India" "Coale-Trussell model" "Beta distribution model"
+2
+
+SLIDER
+797
+632
+986
+665
+cde-alpha
+cde-alpha
+0.01
+0.3
+0.0
+0.0001
+1
+dft: 0.1946
+HORIZONTAL
+
+SLIDER
+796
+669
+976
+702
+cde-beta
+cde-beta
+-1
+0
+0.0
+0.0001
+1
+dft: -0.174
+HORIZONTAL
+
+SLIDER
+797
+706
+998
+739
+cde-gamma
+cde-gamma
+-0.4
+0
+0.0
+0.0001
+1
+dft: -0.2881
+HORIZONTAL
+
+SLIDER
+996
+628
+1185
+661
+ct-level-natural-fertility
+ct-level-natural-fertility
+0
+1.5
+0.0
+0.001
+1
+NIL
+HORIZONTAL
+
+SLIDER
+998
+666
+1191
+699
+ct-level-fertility-control
+ct-level-fertility-control
+-1
+1
+0.0
+0.001
+1
+NIL
+HORIZONTAL
+
 PLOT
-182
-330
-388
-470
+578
+446
+784
+566
 mortality (prob. dying)
 NIL
 NIL
@@ -1510,16 +1759,16 @@ NIL
 10.0
 true
 false
-"" "clear-plot\nset-plot-y-range -0.001 (precision (max (list max mortalityTable-women max mortalityTable-men) + 0.001) 0.01)"
+"" "clear-plot\nset-plot-y-range -0.001 (precision (max (list max womenMortalityTable max menMortalityTable) + 0.001) 0.01)"
 PENS
-"default" 1.0 0 -5298144 true "" "plot-table mortalityTable-women"
-"pen-1" 1.0 0 -14070903 true "" "plot-table mortalityTable-men"
+"default" 1.0 0 -5298144 true "" "plot-table womenMortalityTable"
+"pen-1" 1.0 0 -14070903 true "" "plot-table menMortalityTable"
 
 PLOT
-182
-614
-388
-770
+792
+446
+992
+566
 nuptiality (prob. marrying)
 NIL
 NIL
@@ -1529,16 +1778,16 @@ NIL
 10.0
 true
 false
-"" "clear-plot \nset-plot-y-range -0.001 (precision (max (list max nuptialityTable-women max nuptialityTable-men) + 0.001) 0.01)"
+"" "clear-plot \nset-plot-y-range -0.001 (precision (max (list max womenNuptialityTable max menNuptialityTable) + 0.001) 0.01)"
 PENS
-"default" 1.0 0 -5298144 true "" "plot-table nuptialityTable-women"
-"pen-1" 1.0 0 -14070903 true "" "plot-table nuptialityTable-men"
+"default" 1.0 0 -5298144 true "" "plot-table womenNuptialityTable"
+"pen-1" 1.0 0 -14070903 true "" "plot-table menNuptialityTable"
 
 PLOT
-182
-470
-389
-613
+994
+445
+1215
+565
 fertility (prob. of giving birth)
 NIL
 NIL
@@ -1548,15 +1797,30 @@ NIL
 10.0
 true
 false
-"" "clear-plot \nset-plot-y-range -0.001 (precision (max fertilityTable + 0.001) 0.01)"
+"" "clear-plot \nset-plot-y-range -0.001 (precision (max womenFertilityTable + 0.001) 0.01)"
 PENS
-"default" 1.0 0 -5298144 true "" "plot-table fertilityTable"
+"default" 1.0 0 -5298144 true "" "plot-table womenFertilityTable"
+
+SLIDER
+999
+712
+1214
+745
+betaDist-av-num-offspring
+betaDist-av-num-offspring
+0
+30
+0.0
+0.001
+1
+NIL
+HORIZONTAL
 
 PLOT
-1064
-431
-1264
-551
+787
+324
+987
+444
 couple count
 NIL
 NIL
@@ -1571,346 +1835,109 @@ PENS
 "default" 1.0 1 -16777216 true "" "histogram [hh_count-couples] of households"
 
 CHOOSER
-400
-633
-557
-678
+8
+415
+134
+460
 residence-rule
 residence-rule
 "patrilocal-patrilineal" "matrilocal-matrilineal"
 0
 
+SLIDER
+796
+744
+968
+777
+cde-delta
+cde-delta
+0
+10
+0.0
+.01
+1
+dft: 6.06
+HORIZONTAL
+
 MONITOR
-1103
-599
-1203
-644
+610
+354
+699
+391
 % 0-4 (women)
 100 * womenFirstAgeGroup / totalWomen
 2
 1
-11
+9
 
 MONITOR
-1103
-643
-1203
-688
+610
+390
+699
+427
 % 0-4 (men)
 100 * menFirstAgeGroup / totalMen
 2
 1
-11
+9
 
 MONITOR
-1086
-22
-1296
-79
-total population growth (%)
-totalPopulationGrowth
+562
+89
+680
+134
+nat. pop. growth (%)
+naturalPopulationGrowth
 2
 1
-14
-
-SLIDER
-393
-702
-578
-735
-c1-women
-c1-women
-0
-1
-0.9
-0.001
-1
-(default: 0.85)
-HORIZONTAL
-
-SLIDER
-760
-700
-946
-733
-sigma1-women
-sigma1-women
-0
-2 * 5
-5.0
-0.001
-1
-(default: 5)
-HORIZONTAL
-
-SLIDER
-578
-702
-759
-735
-mu-women
-mu-women
-0
-40
-15.0
-0.001
-1
-(default: 20)
-HORIZONTAL
-
-SLIDER
-394
-736
-578
-769
-c1-men
-c1-men
-0
-1
-0.85
-0.001
-1
-(default: 0.85)
-HORIZONTAL
-
-SLIDER
-578
-735
-760
-768
-mu-men
-mu-men
-0
-2 * 20
-20.0
-0.001
-1
-(default: 20)
-HORIZONTAL
-
-SLIDER
-760
-735
-945
-768
-sigma1-men
-sigma1-men
-0
-2 * 5
-2.0
-0.001
-1
-(default: 5)
-HORIZONTAL
-
-SLIDER
-392
-471
-577
-504
-c1-fert
-c1-fert
-0
-1
-0.9
-0.001
-1
-(default: 0.85)
-HORIZONTAL
-
-SLIDER
-392
-539
-578
-572
-sigma1-fert
-sigma1-fert
-0
-2 * 5
-5.029
-0.001
-1
-(default: 5)
-HORIZONTAL
-
-SLIDER
-394
-574
-580
-607
-sigma2-fert
-sigma2-fert
-0
-2 * 5
-10.0
-0.001
-1
-(default: 5)
-HORIZONTAL
-
-SLIDER
-392
-505
-573
-538
-mu-fert
-mu-fert
-0
-40
-25.783
-0.001
-1
-(default: 20)
-HORIZONTAL
-
-BUTTON
-37
-634
-146
-667
-refresh tables
-build-demography-tables\nupdate-plots
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-MONITOR
-1085
-215
-1211
-260
-women immigration rate
-womenIn / totalWomen
-0
-1
 11
 
-MONITOR
-1213
-216
-1324
-261
-men immigration rate
-menIn / totalMen
-0
-1
-11
-
-MONITOR
-1086
-264
-1208
-309
-women emigration rate
-womenOut / totalWomen
-0
-1
-11
-
-MONITOR
-1214
-264
-1322
-309
-men emigration rate
-menOut / totalMen
-0
-1
-11
-
-MONITOR
-15
-438
-157
-475
-NIL
-houseHoldInitialAgeDistribution
-17
-1
-9
-
-MONITOR
-24
-557
-152
-594
-NIL
-maxCoupleCountDistribution
-0
-1
-9
-
-TEXTBOX
-13
-544
-169
-567
-<minimum><SPACE><maximum>
-9
-0.0
-1
-
-TEXTBOX
-7
-424
-163
-446
-<minimum><SPACE><maximum>
-9
-0.0
-1
-
-MONITOR
-1168
-326
+SLIDER
 1251
-371
-orphans count
-totalOrphans
+555
+1423
+588
+cde-E
+cde-E
 0
 1
-11
-
-SLIDER
-947
-699
-1136
-732
-sigma2-women
-sigma2-women
-0
-2 * 5
-2.0
+0.0
 0.001
 1
-(default: 5)
+NIL
 HORIZONTAL
 
 SLIDER
-948
-734
-1136
-767
-sigma2-men
-sigma2-men
+1254
+600
+1426
+633
+cde-sigma
+cde-sigma
 0
-2 * 5
-10.0
+5
+0.0
 0.001
 1
-(default: 5)
+NIL
+HORIZONTAL
+
+SLIDER
+1255
+646
+1427
+679
+cde-mu
+cde-mu
+0
+40
+0.0
+0.001
+1
+NIL
 HORIZONTAL
 
 @#$#@#$#@
-## TO DO
-- add parametric tabu restrictions to the formation of couples. Now, it is possible to have any given single individual marrying any other single, even siblings and, less likely, mother-son/father-daughter
-
 ## WHAT IS IT?
 
 (a general understanding of what the model is trying to show or explain)
