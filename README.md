@@ -10,13 +10,13 @@ This collection is intended as a open resource for anyone creating (or willing t
 
 A general template for structuring NetLogo models (exemplifies general practices such as GNU license, UI setting, commentary, procedures for parameter checks, structuring procedures using commentary, etc.)
 
-![0-basic interface](screenshots/00-basic%20interface.png)
+![00-basic interface](screenshots/00-basic%20interface.png)
 
 ## Growers ("01-growers.nlogo")
 
 Template illustrating the implementation of a density-dependent population growth.
 
-![1-growers interface](screenshots/01-growers%20interface.png)
+![01-growers interface](screenshots/01-growers%20interface.png)
 
 ## Terrain Builder ("02-terrainBuilder.nlogo")
 
@@ -24,7 +24,7 @@ Template including a submodel to generate local-scale inland terrain. "Terrain" 
 
 This template contain examples of data exporting and using helper agents (i.e. agents used temporally to create patterns).
 
-![2-terrainBuilder interface](screenshots/02-terrainBuilder%20interface.png)
+![02-terrainBuilder_potential interface](screenshots/02-terrainBuilder_potential%20interface.png)
 
 ## Land Use ("3-landUse.nlogo")
 
@@ -40,13 +40,13 @@ Group efficiency is represented as dependent on group size (total number of inte
 
 This template introduces how to create multiple modes of visualisation or display, import parameter settings from files and generate video animations of a simulation.
 
-![3-landUse interface](screenshots/03-landUse%20interface.png)
+![03-landUse interface](screenshots/03-landUse%20interface.png)
 
 ## Household Demography ("4-householdDemography.nlogo")
 
 This template sets a general demographic model representing individual births (fertility submodel), deaths (mortality submodel), and match-making (nuptiality submodel). Individuals are represented not as separate agents, but as values in lists (e.g. age, sex) placed inside household agents.
 
-![4-householdDemography interface](screenshots/04-householdDemography%20interface.png)
+![04-householdDemography interface](screenshots/04-householdDemography%20interface.png)
 
 The fertility submodel is an approximation to the age-specific patterns observed in human populations (beta function curve). The mortality submodel is the Coale-Demeny Life Tables Model, available in the demoR package in R. This model was built based on a large set of 20th-century demographic data (Coale, Demeny and Vaughn, 1983). The nuptiality submodel corresponds to the first parametric model presented in Peristeva and Kostaki (2015).
 
@@ -65,9 +65,15 @@ Additionally, "householdDemography.Rmd" and "householdDemography.nb.html" contai
 
 ## Weather ("05-weather.nlogo")
 
+![05-weather interface](screenshots/05-weather%20interface.png)
+
 ## Terrain Builder - elevation ("06-terrainBuilder_elevation.nlogo")
 
+![06-terrainBuilder_elevation interface](screenshots/06-terrainBuilder_elevation%20interface.png)
+
 ## Terrain Builder - waterFlow ("06-terrainBuilder_waterFlow.nlogo")
+
+![07-terrainBuilder_waterFlow interface](screenshots/07-terrainBuilder_waterFlow%20interface.png)
 
 ## Terrain Builder - soilWaterBalance ("06-terrainBuilder_soilWaterBalance.nlogo")
 
