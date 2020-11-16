@@ -1,9 +1,62 @@
-<mxfile host="app.diagrams.net" modified="2020-11-16T12:53:24.222Z" agent="5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36" etag="fXRHIByk7GKCp2a7ouyu" version="13.9.9" type="github">
+<mxfile host="app.diagrams.net" modified="2020-11-16T13:36:01.980Z" agent="5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36" etag="dLshxyg_tkN1K4WQOZOn" version="13.9.9" type="github">
   <diagram id="4BCitMFgAUkUqsimP4Va" name="Page-1">
     <mxGraphModel dx="1038" dy="548" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
+        <mxCell id="puownyQQIAGT5_0H63wK-23" value="Cow" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="120" width="280" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="puownyQQIAGT5_0H63wK-24" value="# Parameters&#xa;+ metabolicCost: float&#xa;+ reproductiveRate: float&#xa;# Variables&#xa;+ position: [float, float]&#xa;+ energy: float" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="puownyQQIAGT5_0H63wK-23">
+          <mxGeometry y="26" width="280" height="96" as="geometry" />
+        </mxCell>
+        <mxCell id="puownyQQIAGT5_0H63wK-25" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;" vertex="1" parent="puownyQQIAGT5_0H63wK-23">
+          <mxGeometry y="122" width="280" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="puownyQQIAGT5_0H63wK-26" value="+ CheckSurvival(metabolicCost float, energy float)&#xa;+ Move(newPosition [float, float])&#xa;+ EatGrass(grassBiomassHere float)&#xa;+ Reproduce()&#xa;+ StayOrMove(grassBiomassHere float)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="puownyQQIAGT5_0H63wK-23">
+          <mxGeometry y="140" width="280" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="puownyQQIAGT5_0H63wK-28" value="Cow" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;" vertex="1" parent="1">
+          <mxGeometry x="460" y="320" width="240" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="puownyQQIAGT5_0H63wK-29" value="# Parameters&#xa;+ typeOfDiet = &quot;grass&quot;&#xa;+ metabolicCost = 10&#xa;+ movementCost = 1&#xa;+ reproductiveRate = 0.001&#xa;+ reproductiveCost = 5&#xa;# Variables&#xa;+ owner: Human" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="puownyQQIAGT5_0H63wK-28">
+          <mxGeometry y="26" width="240" height="124" as="geometry" />
+        </mxCell>
+        <mxCell id="puownyQQIAGT5_0H63wK-30" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;" vertex="1" parent="puownyQQIAGT5_0H63wK-28">
+          <mxGeometry y="150" width="240" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="puownyQQIAGT5_0H63wK-31" value="+ EatGrass(grassBiomassHere float)&#xa;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="puownyQQIAGT5_0H63wK-28">
+          <mxGeometry y="168" width="240" height="42" as="geometry" />
+        </mxCell>
+        <mxCell id="puownyQQIAGT5_0H63wK-32" value="Animal" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;" vertex="1" parent="1">
+          <mxGeometry x="460" y="10" width="240" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="puownyQQIAGT5_0H63wK-33" value="# Parameters&#xa;+ typeOfDiet: string&#xa;+ metabolicCost: float&#xa;+ movementCost: float&#xa;+ reproductiveRate: float&#xa;+ reproductiveCost: float&#xa;# Variables&#xa;+ position: [float, float]&#xa;+ energy: float" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="puownyQQIAGT5_0H63wK-32">
+          <mxGeometry y="26" width="240" height="134" as="geometry" />
+        </mxCell>
+        <mxCell id="puownyQQIAGT5_0H63wK-34" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;" vertex="1" parent="puownyQQIAGT5_0H63wK-32">
+          <mxGeometry y="160" width="240" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="puownyQQIAGT5_0H63wK-35" value="+ CheckSurvival(metabolicCost float, energy float)&#xa;+ Move(newPosition [float, float])&#xa;+ Eat(biomassHere float)&#xa;+ Reproduce()&#xa;+ StayOrMove(grassBiomassHere float)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="puownyQQIAGT5_0H63wK-32">
+          <mxGeometry y="178" width="240" height="82" as="geometry" />
+        </mxCell>
+        <mxCell id="puownyQQIAGT5_0H63wK-36" value="" style="endArrow=none;html=1;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="puownyQQIAGT5_0H63wK-32" target="puownyQQIAGT5_0H63wK-28">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="330" y="380" as="sourcePoint" />
+            <mxPoint x="490" y="380" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="puownyQQIAGT5_0H63wK-37" value="parent" style="edgeLabel;resizable=0;html=1;align=left;verticalAlign=bottom;" connectable="0" vertex="1" parent="puownyQQIAGT5_0H63wK-36">
+          <mxGeometry x="-1" relative="1" as="geometry">
+            <mxPoint y="20" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="puownyQQIAGT5_0H63wK-38" value="child" style="edgeLabel;resizable=0;html=1;align=right;verticalAlign=bottom;" connectable="0" vertex="1" parent="puownyQQIAGT5_0H63wK-36">
+          <mxGeometry x="1" relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="puownyQQIAGT5_0H63wK-39" value="" style="html=1;shadow=0;dashed=0;align=center;verticalAlign=middle;shape=mxgraph.arrows2.arrow;dy=0.6;dx=40;notch=0;" vertex="1" parent="1">
+          <mxGeometry x="340" y="260" width="100" height="70" as="geometry" />
+        </mxCell>
       </root>
     </mxGraphModel>
   </diagram>
